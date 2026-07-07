@@ -1,0 +1,30 @@
+﻿T-002 검증 기록 — Upstage API 연동 및 공통 모듈 구현
+생성 시각: 2026-07-07T16:32:31+09:00
+
+## 구현
+- src/common/upstage_client.py: UpstageClient 클래스
+  - .env의 UPSTAGE_API_KEY 환경변수 로딩 (python-dotenv)
+  - langchain_upstage.ChatUpstage 기반 Solar Pro 호출 인터페이스 (chat 메서드)
+  - API 키 부재 시 ValueError로 명확한 예외 발생 (인스턴스화 시점)
+- .env.example: UPSTAGE_API_KEY= (값 없는 템플릿)
+
+## pytest tests/test_upstage_client.py -v
+============================= test session starts =============================
+platform win32 -- Python 3.13.14, pytest-9.1.1, pluggy-1.6.0 -- D:\EdgeCanvas\.venv\Scripts\python.exe
+cachedir: .pytest_cache
+rootdir: D:\EdgeCanvas
+plugins: anyio-4.14.1, langsmith-0.9.8
+collecting ... collected 4 items
+
+tests/test_upstage_client.py::test_env_loader_reads_upstage_api_key PASSED [ 25%]
+tests/test_upstage_client.py::test_client_instantiation_raises_without_api_key PASSED [ 50%]
+tests/test_upstage_client.py::test_client_instantiation_does_not_raise_with_valid_key PASSED [ 75%]
+tests/test_upstage_client.py::test_solar_api_call_returns_success PASSED [100%]
+
+============================== 4 passed in 9.29s ==============================
+
+
+## 실제 Solar API 호출 확인
+test_solar_api_call_returns_success 테스트에서 실제 UPSTAGE_API_KEY로 Solar Pro
+모델에 "Hello World" 텍스트를 전송, 정상 응답(200) 수신 확인. (API 키 값은 이
+기록에 포함하지 않음 — .env는 git 추적 대상 아님)
