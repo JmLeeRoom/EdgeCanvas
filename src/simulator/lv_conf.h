@@ -36,8 +36,8 @@
     #define LV_SDL_DIRECT_EXIT    1
 #endif
 
-/* SDL 드라이버가 SDL_GetTicks 로 tick 을 커스텀 공급 */
-#define LV_TICK_CUSTOM 0
+/* LVGL 9.x 는 SDL 백엔드가 SDL_GetTicks 로 tick 을 자동 공급한다
+ * (8.x 의 LV_TICK_CUSTOM 매크로는 9.x 에서 제거됨). */
 
 /*====================
  *   FEATURES
