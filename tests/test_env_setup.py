@@ -57,11 +57,4 @@ def test_requirements_check_detects_missing_package(tmp_path):
     incomplete.write_text("typer\npydantic\n", encoding="utf-8")
     content = incomplete.read_text(encoding="utf-8").lower()
     missing = [p for p in REQUIRED_PACKAGES if p.lower() not in content]
-    assert missing == [
-        "langchain-upstage",
-        "opencv-python",
-        "requests",
-        "pytest",
-        "black",
-        "flake8",
-    ]
+    assert missing == REQUIRED_PACKAGES[2:]
