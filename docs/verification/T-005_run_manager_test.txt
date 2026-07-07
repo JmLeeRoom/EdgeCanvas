@@ -1,0 +1,41 @@
+T-005 검증 기록 — 로깅 모듈 및 Run ID 기반 산출물 체계 구현
+생성 시각: 2026-07-07T16:55:00+09:00
+
+## 구현
+- src/common/run_manager.py
+  - generate_run_id(): run_YYYYMMDD_XXXX(해시 4자리 hex) 형식 Run ID 생성
+  - create_run_dirs(run_id, base_dir=output/): output/<run_id>/ 하위에
+    logs/, assets/, build/ 폴더를 예외 없이(idempotent) 생성
+  - 디렉토리 생성 시 PermissionError 발생하면, 쓰기 권한이 있는 경로로
+    output 위치를 재설정하도록 안내하는 명확한 메시지로 재발생(12항 실패 대처)
+- src/common/logger.py
+  - get_run_logger(run_id, base_dir=output/): output/<run_id>/logs/app.log
+    파일 핸들러 + 콘솔(StreamHandler)을 동시 지원하는 로거 반환
+  - 같은 run_id로 재호출해도 핸들러가 중복 부착되지 않음
+
+## pytest tests/test_run_manager.py -v
+============================= test session starts =============================
+platform win32 -- Python 3.13.14, pytest-9.1.1, pluggy-1.6.0 -- D:\EdgeCanvas\.venv\Scripts\python.exe
+cachedir: .pytest_cache
+rootdir: D:\EdgeCanvas
+plugins: anyio-4.14.1, langsmith-0.9.8
+collecting ... collected 8 items
+
+tests/test_run_manager.py::test_generate_run_id_matches_expected_format PASSED [ 12%]
+tests/test_run_manager.py::test_generate_run_id_is_unique_across_calls PASSED [ 25%]
+tests/test_run_manager.py::test_create_run_dirs_creates_logs_assets_build PASSED [ 37%]
+tests/test_run_manager.py::test_create_run_dirs_is_idempotent PASSED     [ 50%]
+tests/test_run_manager.py::test_create_run_dirs_permission_error_raises_clear_message PASSED [ 62%]
+tests/test_run_manager.py::test_get_run_logger_writes_to_file PASSED     [ 75%]
+tests/test_run_manager.py::test_get_run_logger_accumulates_multiple_messages PASSED [ 87%]
+tests/test_run_manager.py::test_get_run_logger_also_logs_to_console PASSED [100%]
+
+============================== 8 passed in 0.09s ==============================
+
+## 회귀 확인: pytest tests/ -v (전체 17개)
+17 passed in 5.74s (test_env_setup.py 5개, test_run_manager.py 8개, test_upstage_client.py 4개 모두 PASSED)
+
+## Red 확인 (구현 전)
+pytest tests/test_run_manager.py -v 최초 실행 시:
+ModuleNotFoundError: No module named 'src.common.run_manager'
+(구현 코드 작성 전 "기능이 없어서" 실패 — 정상적인 Red 상태)
