@@ -1,0 +1,8 @@
+typer
+pydantic
+langchain-upstage
+opencv-python
+requests
+pytest
+black
+flake8
