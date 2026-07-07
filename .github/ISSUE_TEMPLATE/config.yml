@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: 단위구현계획서
+    url: https://github.com/JmLeeRoom/EdgeCanvas/blob/main/단위구현계획서.md
+    about: Task 카드(T-xxx) 원문·DoD·테스트 절차는 계획서 제5장을 참조하세요.
+  - name: GitHub 워크플로 가이드
+    url: https://github.com/JmLeeRoom/EdgeCanvas/blob/main/GITHUB_워크플로_가이드.md
+    about: 라벨·브랜치·PR·머지 규칙은 워크플로 가이드를 참조하세요.

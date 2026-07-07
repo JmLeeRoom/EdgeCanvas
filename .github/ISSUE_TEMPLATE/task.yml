@@ -1,0 +1,68 @@
+name: Task (T-xxx)
+description: 단위구현계획서 Task 카드 기반 작업
+title: "[T-xxx] "
+labels: ["status:todo"]
+body:
+  - type: input
+    id: task_id
+    attributes:
+      label: Task ID
+      placeholder: "T-001"
+    validations:
+      required: true
+  - type: dropdown
+    id: phase
+    attributes:
+      label: Phase
+      options:
+        - "Phase A"
+        - "Phase B"
+        - "Phase HW"
+    validations:
+      required: true
+  - type: dropdown
+    id: assignee
+    attributes:
+      label: 담당
+      options:
+        - "A"
+        - "B"
+        - "A+B"
+    validations:
+      required: true
+  - type: input
+    id: predecessor
+    attributes:
+      label: 선행 Task
+      placeholder: "T-001, T-002"
+  - type: textarea
+    id: purpose
+    attributes:
+      label: 목적 (제5장 7항)
+    validations:
+      required: true
+  - type: textarea
+    id: implementation
+    attributes:
+      label: 구현 내용 (제5장 8항)
+    validations:
+      required: true
+  - type: textarea
+    id: test_procedure
+    attributes:
+      label: 단위 테스트 절차 (제5장 10항)
+    validations:
+      required: true
+  - type: checkboxes
+    id: dod
+    attributes:
+      label: 완료 판정 DoD (제5장 11항)
+      options:
+        - label: DoD 항목 1
+        - label: DoD 항목 2
+        - label: DoD 항목 3
+  - type: textarea
+    id: evidence
+    attributes:
+      label: 검증 기록 경로 (제5장 13항)
+      placeholder: "docs/verification/T-xxx_...."
