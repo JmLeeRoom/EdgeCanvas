@@ -1,0 +1,31 @@
+---
+description: GitHub 이슈·브랜치·커밋·PR·라벨·마일스톤 운영 규칙 (JmLeeRoom/EdgeCanvas)
+globs:
+alwaysApply: false
+---
+
+# GitHub 운영 규칙
+
+세부는 `GITHUB_워크플로_가이드.md`를 따른다. 자주 쓰는 핵심만 요약한다.
+`gh` 절대경로: `& "C:\Program Files\GitHub CLI\gh.exe"` (PowerShell, `&&` 대신 `;` 또는 개별 실행).
+
+## 이슈
+
+- Issue 1개 = Task 1개(`[T-xxx] Task Name`). 라벨은 `phase:*`, `module:*`, `assignee:*`, `status:*`, `week:NN`.
+- 착수 시 `status:todo` → `status:in-progress`. 컷 발동 시 `status:cut` 후 Close.
+- 마일스톤: 완료 주차 ≤7 → `M1: Sim loop`, 8~9주 → `M2: Sim E2E`, ≥10주 → `M3: HW HIL`. (`--milestone`에는 **전체 제목**을 넘긴다. `M1`처럼 짧게 주면 실패한다.)
+
+## 브랜치·커밋
+
+- `main`에서 분기: 일반 `feature/T-xxx-slug`, 스파이크 `spike/T-xxx-slug`.
+- 커밋 제목: `[T-xxx] type(scope): 요약`. 본문에 `State: A -> B`, `Refs #N`.
+- `main` 직접 push·force push 금지.
+
+## PR·머지
+
+- PR 제목 `[T-xxx] Task Name`, 본문에 변경 요약·테스트 명령·DoD 체크·`Closes #N`.
+- squash merge(`gh pr merge --squash --delete-branch`). 머지 = Task Done.
+
+## 대량 작업 주의 (경험칙)
+
+- 이슈 일괄 생성 시 한글 제목 인코딩으로 중복 방지 비교가 어긋날 수 있다. 생성 후 반드시 GitHub API(number+title)로 개수·중복을 검증한다.

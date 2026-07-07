@@ -1,0 +1,37 @@
+---
+description: Python/C 코드 작성 규칙 — 시뮬 우선(SDL2) 개발, LangGraph 2단계 루프, Vision 판정, 시크릿 관리
+globs: **/*.py,**/*.c,**/*.h
+alwaysApply: false
+---
+
+# P10_Manufacturing 코딩 표준
+
+`단위구현계획서.md`의 아키텍처(시뮬레이터 우선 → 실기 최종 검증)를 코드에 반영한다.
+
+## Python (에이전트/CLI/Vision)
+
+- Python 3.10+ / 타입 힌트 필수. 데이터 구조는 `pydantic` 모델로 검증한다.
+- CLI는 `typer`, 진입점은 `p10 run --mode {sim|hw}` 형태를 유지한다.
+- 외부 API(Upstage, VARCO)는 반드시 `os.environ`으로 키를 읽는다. 키를 코드/로그에 남기지 않는다.
+- 산출물은 `output/<run_id>/` 구조(제8.4장)를 따른다. 이 폴더는 커밋하지 않는다.
+
+## LangGraph 오케스트레이션 (T-701/702)
+
+- 상태는 `HMIAgentState`(`run_mode`, `sim_gate_passed`, `sim_round`, `hw_round`, `verdict`, `history`).
+- 자가수정 라운드 상한: **sim 5회 / hw 2회**. 상한 초과 시 FAIL 리포트로 `END`.
+- `verify_simulation`(항상) → 게이트 통과 후에만 `build_and_flash`/`verify_physical`(hw).
+
+## Vision (T-603/604)
+
+- 입력은 `ImageSource` 추상화로 받는다: `SimCaptureProvider`(시뮬 PNG) / `CameraCaptureProvider`(실기).
+- 위젯 좌표 허용 오차는 ±5%. 시뮬 경로에서는 원근 보정(T-602)을 bypass한다.
+
+## C / LVGL (시뮬레이터 T-801/802)
+
+- LVGL 9.x API를 사용한다(레거시 8.x 구문 금지). 해상도는 1024×600 고정.
+- 생성된 `ui_screens.c`는 시뮬레이터(SDL2)와 실기에서 동일하게 컴파일되어야 한다.
+
+## 금지
+
+- 실기(ESP-IDF/보드/카메라) 의존 코드를 Phase A(1~9주) 경로에 넣지 않는다.
+- `sdkconfig`, `*.bin`, `build*/`, `.env` 커밋 금지.
