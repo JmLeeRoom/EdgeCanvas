@@ -1,0 +1,124 @@
+# T-009 검증 기록 — Solar Pro 3 비전 멀티모달 입력 및 판정 실험 (스파이크)
+
+- 생성 시각: 2026-07-07 (KST)
+- Task: [T-009] [Spike] Solar Pro 3 비전 멀티모달 입력 및 판정 실험
+- 선행: T-002 (main 머지 완료, #73)
+- 검증 대상 가정: [가정 1] Solar Pro 3 비전 (제9장) — VLM 보조 판정 가능 여부
+
+## 1. 실험 개요 (카드 7 목적)
+
+[가정 1] "Solar Pro 3가 멀티모달 비전 인풋을 정식 지원하고, LCD 캡처 이미지 상의
+텍스트 및 UI 구조를 인식할 수 있는가"를 실측 검증하여, 보조 판정 수단으로서의
+가용 여부를 진단한다.
+
+## 2. 입력 데이터(fixture) 처리 방식
+
+- 실제 LCD/UI 스크린샷이 없어, 카드 8-2가 요구하는 3종을 1024x600 PNG로 합성해
+  `tests/data/`에 저장했다.
+  - `ui_normal.png`    : 정상 화면 (헤더 + 상태 라벨 + OK/Cancel 버튼 정상 배치)
+  - `ui_truncated.png` : 텍스트가 잘린 화면 (라벨이 프레임 밖으로 밀려 잘림, 버튼 라벨 "Canc")
+  - `ui_misplaced.png` : 버튼 배치 오류 화면 (OK/Cancel 버튼이 우/하단 프레임 밖으로 이탈·겹침)
+- fixture는 Pillow로 생성했다. Pillow는 fixture 생성 전용 임시 도구로만 사용했고
+  저장소 런타임 의존성(requirements.txt)이나 커밋 대상에는 포함하지 않았다.
+  (T-008이 reportlab으로 PDF fixture를 합성한 방식과 동일한 원칙.)
+
+## 3. 실험 절차 (카드 10항)
+
+- 실행: `.venv\Scripts\python.exe -m pytest tests/test_solar_vision.py -v -s`
+- 이미지를 base64로 인코딩하여 OpenAI 스타일 멀티모달 메시지
+  (`content: [{type:text}, {type:image_url, image_url:{url:"data:image/png;base64,..."}}]`)를
+  구성하고, 실제 `UPSTAGE_API_KEY`로 `POST https://api.upstage.ai/v1/chat/completions`에 전송.
+- 두 경로로 교차 검증: (A) raw REST(requests), (B) langchain_upstage `ChatUpstage`.
+- 대상 모델: `solar-pro3`(현행 플래그십), `solar-pro2`.
+- 대조군으로 텍스트 전용 요청도 함께 호출.
+
+## 4. 실제 API 응답 (원문)
+
+### solar-pro3 (REST, 이미지+텍스트)
+```
+HTTP 400
+{
+  "error": {
+    "message": "Image input is not allowed for this model",
+    "type": "invalid_request_error",
+    "param": null,
+    "code": null
+  }
+}
+```
+
+### solar-pro2 (REST, 이미지+텍스트)
+```
+HTTP 400
+{
+  "error": {
+    "message": "Image input is not allowed for this model",
+    "type": "invalid_request_error",
+    "param": null,
+    "code": null
+  }
+}
+```
+
+### langchain_upstage ChatUpstage(solar-pro3, 멀티모달 HumanMessage)
+```
+BadRequestError: Error code: 400 - {'error': {'message': 'Image input is not allowed
+for this model', 'type': 'invalid_request_error', 'param': None, 'code': None}}
+```
+
+### 대조군 — 텍스트 전용 (solar-pro3)
+```
+HTTP 200 — 정상 응답 반환 (API 키/엔드포인트 자체는 유효)
+```
+
+### 공식 API 문서 교차 확인
+- Upstage 공식 API 문서(console.upstage.ai/api/docs)의 Chat Completions(`/v1/chat/completions`,
+  `solar-pro3`/`solar-pro2`/`solar-mini`/`syn-pro`) 메시지 `content`는 **텍스트 문자열**만 규정한다.
+- `image_url`(base64) 콘텐츠 타입은 오직 Document AI 계열(Document OCR, Document Parse,
+  Information Extract, Document Classify) 엔드포인트에만 문서화되어 있다.
+- 즉, 범용 채팅 LLM(Solar Pro 3)에는 이미지 멀티모달 입력 채널이 없다.
+
+## 5. 결론 — Go/No-Go
+
+**No-Go (가정 기각).** Solar Pro 3(및 Solar Pro 2)는 채팅 완성 엔드포인트에서
+이미지 멀티모달 입력을 지원하지 않는다. 실제 API가 `HTTP 400 "Image input is not
+allowed for this model"`로 명시적으로 거부했으며(REST·langchain 양쪽 동일), 공식 문서상
+멀티모달 `image_url` 입력은 Document AI 계열 전용이다.
+
+이는 카드 12항의 *실패* 시나리오("Solar Pro 3가 비전 모델 미지원 에러를 발생")에
+정확히 해당한다.
+
+## 6. Fallback 문서화 (카드 12항 / 제9장 [가정 1])
+
+가정을 기각하고 다음 경로를 메인 검증 수단으로 확정한다.
+
+1. **1차(메인) 판정: OpenCV 이미지 픽셀 매칭 + 로컬 OCR 100% 경로.**
+   - 본 스파이크에서 `tests/test_solar_vision.py::opencv_layout_verdict()`로 OpenCV 기반
+     로컬 UI 결격 판정(프레임 경계 이탈/버튼 클리핑 검출)이 실제로 동작함을 증명했다.
+     `ui_misplaced.png` → FAIL(사유 포함), `ui_normal.png` → PASS로 정확히 분기.
+   - 후속 T-604(OCR + 텍스트/의미 일치 분석기)는 EasyOCR/Tesseract 로컬 OCR을 메인으로 삼는다.
+2. **Solar Pro 3의 역할 축소:** 이미지 판정에서 제외하고, 컴파일러 오류 수정 등
+   **텍스트 기반 자가 치유(self-healing)** 용도로만 사용한다(T-702 환류 프롬프트).
+3. 후속 영향 Task: T-604(비전 판정 구현체를 로컬 OCR/OpenCV로 고정), T-302(코드 생성은
+   텍스트 전용이므로 영향 없음).
+
+## 7. DoD 판정 (카드 11항)
+
+| DoD 항목 | 결과 | 근거 |
+|---|---|---|
+| Solar Pro 3가 이미지 입력을 받아 에러 없이 텍스트 응답을 처리 완료함 | **미충족(가정 기각 확정)** | 실제 API가 HTTP 400 "Image input is not allowed"로 이미지 입력을 거부. 이는 스파이크의 정직한 No-Go 결론이며, 카드 12항 실패 시나리오에 해당한다. |
+| UI 결격 상태에 대해 논리적으로 정합성 있는 지적이 답변에 포함됨 | **N/A(이미지 입력 미지원으로 도달 불가)** | 대신 OpenCV fallback이 UI 결격(버튼 이탈)을 FAIL로 정확히 지적함을 증명. |
+
+> 참고: 이 DoD 두 항목은 "이미지 지원됨"을 전제로 작성된 낙관 시나리오다. 스파이크의
+> 성격상 가정이 거짓으로 판명된 것 자체가 유효한 완료 결과이며, 카드 12항이 그 경우의
+> 조치(가정 기각 + OpenCV/OCR fallback)를 명시하고 있다. 스파이크는 목적(가용 여부 진단)을
+> 달성했으므로 완료로 판정한다.
+
+## 8. 재현 방법
+
+```
+.venv\Scripts\python.exe -m pytest tests/test_solar_vision.py -v -s
+```
+- 오프라인 테스트(인코딩/메시지구성/OpenCV fallback)는 API 키 없이도 통과.
+- 라이브 테스트(`@REQUIRES_LIVE_API`)는 `UPSTAGE_API_KEY` 설정 시 실제 거부 응답을 관측.
+- 실행 결과: 9 passed.
