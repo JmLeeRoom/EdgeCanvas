@@ -41,6 +41,31 @@ pwsh src/simulator/check_build.ps1
 
 > `build_sim/` 은 `.gitignore` 에 등록되어 있어 산출물은 커밋되지 않는다.
 
+## 실행 (SDL2.dll 런타임 의존)
+
+```powershell
+& .\build_sim\bin\lvgl_simulator.exe
+# 또는 파일 탐색기에서 lvgl_simulator.exe 더블클릭
+```
+
+exe 는 `SDL2.dll` 을 **동적 링크**하므로 실행 시 이 DLL 을 exe 폴더 또는 `PATH` 에서 찾는다.
+없으면 Windows 가 `SDL2.dll이 없어 코드 실행을 진행할 수 없습니다` 오류 창을 띄운다.
+
+`CMakeLists.txt` 는 빌드 후(`add_custom_command(... POST_BUILD ...)`)
+`SDL2.dll` 을 출력 디렉터리(`build_sim/bin/`)로 자동 복사하므로,
+정상 빌드했다면 **더블클릭만으로 실행**된다. (DLL 은 `.gitignore` 대상이라 커밋되지 않는다)
+
+DLL 오류가 나면 다음 중 하나로 해결한다.
+
+```powershell
+# (1) 최신 CMakeLists 로 재빌드 → SDL2.dll 자동 복사
+cmake --build build_sim
+# (2) 수동 복사
+Copy-Item C:\msys64\mingw64\bin\SDL2.dll build_sim\bin\
+# (3) 실행 세션 PATH 에 MSYS2 bin 추가
+$env:Path = "C:\msys64\mingw64\bin;" + $env:Path
+```
+
 ## 사전 요구 도구
 
 - CMake ≥ 3.16
