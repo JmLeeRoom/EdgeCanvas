@@ -1,0 +1,45 @@
+{
+  "task": "T-201",
+  "generated_at": "2026-07-09T07:41:19+09:00",
+  "source_pdf": "esp32-p4_datasheet_en.pdf",
+  "api": "Upstage Document Parse (split=element, coordinates=True, ocr=auto)",
+  "params": {
+    "chunk_size": 1000,
+    "chunk_overlap": 100
+  },
+  "summary": {
+    "total_chunks": 334,
+    "avg_length": 997.4,
+    "max_length": 1000,
+    "min_length": 142,
+    "all_within_size_limit": true
+  },
+  "overlap_observed": true,
+  "sample_chunks": [
+    {
+      "index": 0,
+      "text": "<h1 id='0' style='font-size:22px'>ESP32-P4 Series</h1>\n<br><h1 id='1' style='font-size:20px'>Datasheet Pre-release v0.6</h1>\n<p id='2' data-category='paragraph' style='font-size:18px'>MCU with one RISC-V 32-bit dual-core high-performance microprocessor and one single-core<br>low-power microprocessor<br>Powerful image and voice processing capability<br>16 MB or 32 MB PSRAM in the chip's package<br>55 GPIOs, rich set of peripherals<br>QFN104 (10x10 mm) Package</p>\n<p id='3' data-category='paragraph' style='font-size:14px'></p>\n<br><p id='4' data-category='paragraph' style='font-size:20px'>Including:</p>\n<br><p id='5' data-category='paragraph' style='font-size:16px'>ESP32-P4NRW16X</p>\n<br><p id='6' data-category='paragraph' style='font-size:14px'>ESP32-P4NRW32X</p>\n<p id='7' data-category='paragraph' style='font-size:18px'>ESPRESSIF</p>\n<footer id='8' style='font-size:16px'>ww.espressif.com</footer>\n<header id='9' style='font-size:22px'>Espressif<br>Systems</header>\n<br><header id='13' st",
+      "length": 1000
+    },
+    {
+      "index": 1,
+      "text": "</footer>\n<header id='9' style='font-size:22px'>Espressif<br>Systems</header>\n<br><header id='13' style='font-size:20px'>Product Overview</header>\n<p id='14' data-category='paragraph' style='font-size:18px'>ESP32-P4 is a high-performance MCU that supports large internal memory and has powerful image and voice processing capabilities. The MCU consists of a High<br>Performance (HP) system and a Low Power (LP) system. The HP system contains a RISC-V dual-core CPU and rich peripherals, while the LP system contains a<br>low-power RISC-V single-core CPU and various peripherals optimized for low-power applications.</p>\n<p id='15' data-category='paragraph' style='font-size:16px'>The functional block diagram of the SoC is shown below. For more information on power consumption, see Section 4.1.4.6 Low-Power Management.</p>\n<figure id='16'><img style='font-size:14px' alt=\"ESP32-P4 - Espressif's High Performance MCU\nHP Core System LP Core System Low Power System LP Peripherals\n* ☆ * LP\nRISC-V 32-b",
+      "length": 1000
+    },
+    {
+      "index": 2,
+      "text": "h Performance MCU\nHP Core System LP Core System Low Power System LP Peripherals\n* ☆ * LP\nRISC-V 32-bit HPSPM LPSPM LP SPI LP I2C LP I2S\nPower Management Unit Mailbox\nRISC-V 32-bit\nDual-core Microprocessor\nSingle-core *\n400 MHz L2MEM LPROM LP GPIO LP UART LP DIG ADC Controller\nMicroprocessor\nBAT Power Supply eFuse *\n2-level * 40 MHz\nJTAG L2ROM JTAG GP & WDT & LP Timers & Super WDT\nCache Controller\nTouch Sensor Temperature Sensor\nHP Peripherals\n* * * DIG ADC * * *\nSPI I2C I2S with PDM ISP PPA\nController Security\n* ☆ SD/MMC * * * *\nGPIO UART Bit Scrambler H264 Encoder 2D-DMA SHA RSA_DS ECC HMAC\nHost\n* * * USB Serial * * I3C Master & ☆ * ☆\n Pulse Counter RMT JPEG Codec TEE TRNG ECDSA_DS AES\nTWAI\nJTAG Slave\n※ * * USB 2.0 OTG Camera * * * ☆\nGDMA DW-GDMA SOC ETM MIPI CSI Digital Signature APM XTS_AES\nHigh-speed Interface\n☆ * * USB 2.0 OTG * * * *\nLED PWM MCPWM Parallel IO LCD Interface MIPI DSI PMP and PMA Secure Boot\nFull-speed\n* * * * *\nGP Timers System Timer WDT Ethernet Brownout Debug Pro",
+      "length": 1000
+    },
+    {
+      "index": 3,
+      "text": " PMP and PMA Secure Boot\nFull-speed\n* * * * *\nGP Timers System Timer WDT Ethernet Brownout Debug Probe HUK and Key Manager 4096-bit OTP\" data-coord=\"top-left:(333,394); bottom-right:(1440,912)\" /></figure>\n<br><header id='11' style='font-size:22px'>Submit<br>Documentation<br>Feedback</header>\n<header id='10' style='font-size:14px'>2</header>\n<header id='12' style='font-size:20px'>ESP32-P4<br>Series<br>Datasheet<br>v0.6</header>\n<p id='17' data-category='paragraph' style='font-size:16px'>Modules having power in specific power modes:</p>\n<br><figure id='18'><img style='font-size:16px' alt=\"Active, Light-sleep\n* Optional in Deep-sleep\nAll modes\" data-coord=\"top-left:(463,956); bottom-right:(662,1016)\" /></figure>\n<br><figure id='20'><img style='font-size:14px' alt=\"※\" data-coord=\"top-left:(955,958); bottom-right:(1023,976)\" /></figure>\n<br><p id='22' data-category='paragraph' style='font-size:14px'>*</p>\n<br><p id='19' data-category='paragraph' style='font-size:14px'>Option 0 in Light-sle",
+      "length": 1000
+    },
+    {
+      "index": 4,
+      "text": "ze:14px'>*</p>\n<br><p id='19' data-category='paragraph' style='font-size:14px'>Option 0 in Light-sleep</p>\n<br><p id='21' data-category='paragraph' style='font-size:14px'>Option 1 in Light-sleep</p>\n<caption id='23' style='font-size:18px'>ESP32-P4 Functional Block Diagram</caption>\n<h1 id='24' style='font-size:22px'>Features</h1>\n<br><h1 id='26' style='font-size:20px'>CPU and Memory</h1>\n<p id='27' data-category='list' style='font-size:18px'>· 32-bit RISC-V dual-core processor up to 400 MHz for HP system</p>\n<p id='28' data-category='list' style='font-size:18px'>· 32-bit RISC-V single-core processor up to 40 MHz for LP system</p>\n<p id='29' data-category='list' style='font-size:18px'>· CoreMark Score (dual-core):</p>\n<h1 id='30' style='font-size:14px'>- 6.92 CoreMark/MHz</h1>\n<p id='25' data-category='list' style='font-size:16px'>· 128 KB HP ROM<br>· 16 KB LP ROM<br>· 768 KB HP L2MEM<br>· 32 KB LP SRAM<br>· 8 KB system SPM (Scratchpad Memory)<br>· Multiple high-speed external memory in",
+      "length": 1000
+    }
+  ]
+}
