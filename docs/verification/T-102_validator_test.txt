@@ -1,0 +1,29 @@
+﻿============================= test session starts =============================
+platform win32 -- Python 3.14.3, pytest-9.1.0, pluggy-1.6.0 -- C:\Users\togod\AppData\Local\Python\pythoncore-3.14-64\python.exe
+cachedir: .pytest_cache
+rootdir: D:\EdgeCanvas
+plugins: anyio-4.12.1, asyncio-1.4.0
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 10 items
+
+tests/test_cli_validator.py::TestValidatePdf::test_valid_pdf_header_returns_true PASSED [ 10%]
+tests/test_cli_validator.py::TestValidatePdf::test_fake_pdf_extension_text_file_raises PASSED [ 20%]
+tests/test_cli_validator.py::TestValidatePdf::test_missing_pdf_file_raises PASSED [ 30%]
+tests/test_cli_validator.py::TestValidatePdf::test_empty_pdf_file_raises PASSED [ 40%]
+tests/test_cli_validator.py::TestValidatePdf::test_pdf_header_check_reads_at_most_1024_bytes PASSED [ 50%]
+tests/test_cli_validator.py::TestValidateRequirements::test_valid_requirements_file_returns_true PASSED [ 60%]
+tests/test_cli_validator.py::TestValidateRequirements::test_empty_requirements_file_raises PASSED [ 70%]
+tests/test_cli_validator.py::TestValidateRequirements::test_missing_requirements_file_raises PASSED [ 80%]
+tests/test_cli_validator.py::TestValidateRequirements::test_requirements_file_with_control_characters_raises PASSED [ 90%]
+tests/test_cli_validator.py::TestValidateRequirements::test_requirements_file_allows_normal_whitespace PASSED [100%]
+
+============================= 10 passed in 0.20s ==============================
+
+--- SUCCESS CASES ---
+validate_pdf(sheet.pdf) -> True
+validate_requirements(spec.txt) -> True
+
+--- FAILURE CASES ---
+validate_pdf(fake.pdf) -> InvalidFileException: PDF 헤더 매직 바이트(b'%PDF-')를 찾을 수 없습니다: C:\Users\togod\AppData\Local\Temp\tmpbdwb2xnl\fake.pdf
+validate_requirements(empty_spec.txt) -> InvalidFileException: 요구사항 파일이 비어 있습니다: C:\Users\togod\AppData\Local\Temp\tmpbdwb2xnl\empty_spec.txt
+validate_requirements(binary_spec.txt) -> InvalidFileException: 요구사항 파일에 허용되지 않는 제어문자가 포함되어 있습니다: C:\Users\togod\AppData\Local\Temp\tmpbdwb2xnl\binary_spec.txt
