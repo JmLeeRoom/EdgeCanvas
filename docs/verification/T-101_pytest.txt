@@ -1,0 +1,21 @@
+============================= test session starts =============================
+platform win32 -- Python 3.14.3, pytest-9.1.0, pluggy-1.6.0 -- C:\Users\togod\AppData\Local\Python\pythoncore-3.14-64\python.exe
+cachedir: .pytest_cache
+rootdir: D:\EdgeCanvas
+plugins: anyio-4.12.1, asyncio-1.4.0
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 11 items
+
+tests/test_cli.py::test_run_help_exposes_documented_options PASSED       [  9%]
+tests/test_cli.py::test_run_help_exposes_mode_option_with_sim_hw PASSED  [ 18%]
+tests/test_cli.py::test_top_level_help_lists_all_three_commands PASSED   [ 27%]
+tests/test_cli.py::test_run_rejects_invalid_mode PASSED                  [ 36%]
+tests/test_cli.py::test_run_rejects_nonexistent_pdf_path PASSED          [ 45%]
+tests/test_cli.py::test_run_rejects_nonexistent_spec_path PASSED         [ 54%]
+tests/test_cli.py::test_run_accepts_valid_inputs PASSED                  [ 63%]
+tests/test_cli.py::test_normalize_path_returns_absolute_from_relative PASSED [ 72%]
+tests/test_cli.py::test_run_normalizes_pdf_path_to_absolute PASSED       [ 81%]
+tests/test_cli.py::test_evaluate_help_available PASSED                   [ 90%]
+tests/test_cli.py::test_cleanup_help_available PASSED                    [100%]
+
+============================= 11 passed in 3.52s ==============================
