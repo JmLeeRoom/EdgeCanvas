@@ -1,0 +1,22 @@
+﻿============================= test session starts =============================
+platform win32 -- Python 3.14.3, pytest-9.1.0, pluggy-1.6.0 -- C:\Users\togod\AppData\Local\Python\pythoncore-3.14-64\python.exe
+cachedir: .pytest_cache
+rootdir: D:\EdgeCanvas
+plugins: anyio-4.12.1, asyncio-1.4.0
+asyncio: mode=Mode.STRICT, debug=False, asyncio_default_fixture_loop_scope=None, asyncio_default_test_loop_scope=function
+collecting ... collected 12 items
+
+tests/test_varco_api.py::test_build_generation_payload_contains_prompt_and_size PASSED [  8%]
+tests/test_varco_api.py::test_png_magic_number_constant PASSED           [ 16%]
+tests/test_varco_api.py::test_is_valid_png_accepts_real_png PASSED       [ 25%]
+tests/test_varco_api.py::test_is_valid_png_rejects_garbage PASSED        [ 33%]
+tests/test_varco_api.py::test_extract_image_bytes_from_base64_json PASSED [ 41%]
+tests/test_varco_api.py::test_extract_image_bytes_from_raw_binary_response PASSED [ 50%]
+tests/test_varco_api.py::test_extract_image_bytes_from_url_json PASSED   [ 58%]
+tests/test_varco_api.py::test_save_image_bytes_writes_valid_png PASSED   [ 66%]
+tests/test_varco_api.py::test_save_image_bytes_rejects_broken_png PASSED [ 75%]
+tests/test_varco_api.py::test_make_placeholder_png_is_valid_and_sized PASSED [ 83%]
+tests/test_varco_api.py::test_request_image_falls_back_on_network_error PASSED [ 91%]
+tests/test_varco_api.py::test_varco_art_live_generation SKIPPED (NC_...) [100%]
+
+======================== 11 passed, 1 skipped in 0.14s ========================
