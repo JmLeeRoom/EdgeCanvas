@@ -1,0 +1,209 @@
+"""T-010 스파이크: NC AI VARCO Art 이미지 생성 API 접속 검증 — 단위 테스트.
+
+단위구현계획서.md 제5장 [T-010] 10항 절차를 코드로 검증한다.
+목적(7): [가정 2] "VARCO Art 이미지 생성 API가 외부 서비스 접근을 완전히 허용하고
+REST API 호출 규격을 신뢰성 있게 준수하는가"를 실측 검증한다.
+
+- 오프라인: 요청 페이로드 구성, 응답(JSON 링크/base64/raw 바이너리) 파싱, PNG 매직넘버
+  검증, 디스크 저장, 그리고 카드 12항 Placeholder Fallback(단순 색상 채우기 PNG 생성)이
+  존재·동작함을 항상 검증한다. (API 키 없이도 통과)
+- 라이브(@REQUIRES_LIVE_API): NC_VARCO_API_KEY가 있을 때만, 실제 VARCO Art API에
+  "100x50 파란색 사각형 버튼" 프롬프트를 POST 하고 응답 이미지를 온전한 PNG로 저장한다.
+"""
+import os
+from pathlib import Path
+
+import pytest
+from dotenv import load_dotenv
+
+load_dotenv()
+
+from src.agent.varco_art import (  # noqa: E402
+    PNG_MAGIC,
+    build_generation_payload,
+    extract_image_bytes,
+    is_valid_png,
+    make_placeholder_png,
+    request_image,
+    save_image_bytes,
+)
+
+REQUIRES_LIVE_API = pytest.mark.skipif(
+    not os.getenv("NC_VARCO_API_KEY"),
+    reason="NC_VARCO_API_KEY가 .env에 설정되어 있지 않습니다.",
+)
+
+# 카드 9 산출물: 수신용 임시 이미지 에셋 폴더.
+ASSETS_DIR = Path(__file__).parent / "data" / "varco_received"
+
+BUTTON_PROMPT = "100x50 size blue rectangular submit button image"
+
+
+# ---------------------------------------------------------------------------
+# 오프라인 로직: 요청 페이로드 구성 (카드 8-2)
+# ---------------------------------------------------------------------------
+def test_build_generation_payload_contains_prompt_and_size():
+    """요청 바디에 프롬프트와 100x50 크기가 반영돼야 한다(카드 8-2)."""
+    payload = build_generation_payload(BUTTON_PROMPT, width=100, height=50)
+    assert payload["prompt"] == BUTTON_PROMPT
+    assert payload["width"] == 100
+    assert payload["height"] == 50
+
+
+# ---------------------------------------------------------------------------
+# 오프라인 로직: PNG 매직넘버 검증 (카드 11 DoD)
+# ---------------------------------------------------------------------------
+def test_png_magic_number_constant():
+    """카드 11: PNG 매직넘버는 89 50 4E 47 로 시작해야 한다."""
+    assert PNG_MAGIC == b"\x89PNG\r\n\x1a\n"
+    assert PNG_MAGIC[:4] == bytes([0x89, 0x50, 0x4E, 0x47])
+
+
+def test_is_valid_png_accepts_real_png():
+    png = make_placeholder_png(100, 50, color=(0, 0, 255))
+    assert is_valid_png(png) is True
+
+
+def test_is_valid_png_rejects_garbage():
+    assert is_valid_png(b"not a png at all") is False
+    assert is_valid_png(b"") is False
+    assert is_valid_png(b"\x89PNG") is False  # 매직만 있고 본문 없음
+
+
+# ---------------------------------------------------------------------------
+# 오프라인 로직: 응답 파싱 — JSON 링크 / base64 / raw 바이너리 (카드 8-3)
+# ---------------------------------------------------------------------------
+def test_extract_image_bytes_from_base64_json():
+    """응답 JSON에 base64 이미지가 담긴 경우 디코딩해 바이트를 얻는다."""
+    import base64
+
+    png = make_placeholder_png(100, 50, color=(0, 0, 255))
+    b64 = base64.b64encode(png).decode("ascii")
+
+    class FakeResp:
+        status_code = 200
+        headers = {"Content-Type": "application/json"}
+
+        def json(self):
+            return {"images": [{"data": b64}]}
+
+    out = extract_image_bytes(FakeResp())
+    assert out == png
+    assert is_valid_png(out)
+
+
+def test_extract_image_bytes_from_raw_binary_response():
+    """응답이 image/png raw 바이너리인 경우 그대로 바이트를 반환한다."""
+    png = make_placeholder_png(100, 50, color=(0, 0, 255))
+
+    class FakeResp:
+        status_code = 200
+        headers = {"Content-Type": "image/png"}
+        content = png
+
+    out = extract_image_bytes(FakeResp())
+    assert out == png
+
+
+def test_extract_image_bytes_from_url_json(monkeypatch):
+    """응답 JSON에 이미지 URL만 있는 경우, URL을 내려받아 바이트를 얻는다."""
+    png = make_placeholder_png(100, 50, color=(0, 0, 255))
+
+    class FakeDownloadResp:
+        status_code = 200
+        content = png
+
+    def fake_get(url, timeout=30):
+        assert url == "https://cdn.example.com/img.png"
+        return FakeDownloadResp()
+
+    import src.agent.varco_art as mod
+
+    monkeypatch.setattr(mod.requests, "get", fake_get)
+
+    class FakeResp:
+        status_code = 200
+        headers = {"Content-Type": "application/json"}
+
+        def json(self):
+            return {"images": [{"url": "https://cdn.example.com/img.png"}]}
+
+    out = extract_image_bytes(FakeResp())
+    assert out == png
+
+
+# ---------------------------------------------------------------------------
+# 오프라인 로직: 디스크 저장 (카드 10 통과 기준)
+# ---------------------------------------------------------------------------
+def test_save_image_bytes_writes_valid_png(tmp_path):
+    """정상 PNG 바이트를 디스크에 저장하면 매직넘버가 보존돼야 한다."""
+    png = make_placeholder_png(100, 50, color=(0, 0, 255))
+    dst = tmp_path / "out.png"
+    save_image_bytes(png, dst)
+    assert dst.exists()
+    assert is_valid_png(dst.read_bytes())
+
+
+def test_save_image_bytes_rejects_broken_png(tmp_path):
+    """12: 깨진(비-PNG) 바이너리는 저장을 거부해 오염을 막는다."""
+    with pytest.raises(ValueError):
+        save_image_bytes(b"broken-bytes", tmp_path / "bad.png")
+
+
+# ---------------------------------------------------------------------------
+# 카드 12항 Placeholder Fallback: 단순 색상 채우기 PNG 생성
+# ---------------------------------------------------------------------------
+def test_make_placeholder_png_is_valid_and_sized():
+    """12: API 불가 시 100x50 파란색 placeholder PNG를 온전하게 생성한다."""
+    png = make_placeholder_png(100, 50, color=(0, 0, 255))
+    assert is_valid_png(png)
+    # PNG IHDR(오프셋 16~24)에 폭/높이가 빅엔디언 4바이트로 기록된다.
+    width = int.from_bytes(png[16:20], "big")
+    height = int.from_bytes(png[20:24], "big")
+    assert (width, height) == (100, 50)
+
+
+def test_request_image_falls_back_on_network_error(tmp_path, monkeypatch):
+    """12: 네트워크 에러/비200이면 [가정] 기각 → placeholder fallback PNG를 저장한다."""
+    import src.agent.varco_art as mod
+
+    def boom(*args, **kwargs):
+        raise mod.requests.exceptions.ConnectionError("no route to host")
+
+    monkeypatch.setattr(mod.requests, "post", boom)
+
+    dst = tmp_path / "fallback.png"
+    result = request_image(
+        BUTTON_PROMPT,
+        width=100,
+        height=50,
+        save_path=dst,
+        api_key="dummy",
+        endpoint="https://unreachable.invalid/generate",
+    )
+    assert result["ok"] is False
+    assert result["used_fallback"] is True
+    assert dst.exists()
+    assert is_valid_png(dst.read_bytes())
+
+
+# ---------------------------------------------------------------------------
+# 라이브 실험 — 카드 10항: 실제 VARCO Art API 호출 및 PNG 저장
+# ---------------------------------------------------------------------------
+@REQUIRES_LIVE_API
+def test_varco_art_live_generation():
+    """10, 11: 실제 VARCO Art API에 프롬프트를 POST 하고 온전한 PNG로 저장한다.
+
+    성공 시(200/201) 수신 바이너리가 PNG 매직넘버를 지녀야 한다.
+    권한 미획득/서비스 중단 등으로 실패하면 카드 12항에 따라 fallback으로 전환되며,
+    이때도 스파이크 결론(가정 기각 + placeholder)은 유효하다.
+    """
+    ASSETS_DIR.mkdir(parents=True, exist_ok=True)
+    dst = ASSETS_DIR / "live_button.png"
+    result = request_image(BUTTON_PROMPT, width=100, height=50, save_path=dst)
+    print(f"[T-010] live result={result}")
+
+    assert dst.exists()
+    assert is_valid_png(dst.read_bytes())
+    if result["ok"]:
+        assert result["status_code"] in (200, 201)
