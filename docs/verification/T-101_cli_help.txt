@@ -1,0 +1,14 @@
+                                                                                
+ Usage: main.py run [OPTIONS]                                                   
+                                                                                
+ E2E HMI 자동 생성/검증 파이프라인을 기동한다.                                  
+                                                                                
+┌─ Options ────────────────────────────────────────────────────────────────────┐
+│ *  --pdf-path         TEXT      데이터시트 PDF 파일 경로. [required]         │
+│ *  --spec-path        TEXT      요구사항 텍스트 파일 경로. [required]        │
+│ *  --target           TEXT      타깃 보드명 (예: esp32-p4). [required]       │
+│    --mode             [sim|hw]  실행 모드: sim(시뮬) 또는 hw(실기).          │
+│                                 [default: sim]                               │
+│    --help                       Show this message and exit.                  │
+└──────────────────────────────────────────────────────────────────────────────┘
+
