@@ -77,3 +77,26 @@ if(TARGET SDL2::SDL2)
 else()
     target_link_libraries(lvgl_simulator PRIVATE lvgl ${SDL2_LIBRARIES})
 endif()
+
+# --- SDL2.dll 런타임 자동 복사 (Windows) ------------------------------------
+# Windows 에서 SDL2 를 동적 링크하면 실행 시 SDL2.dll 을 exe 와 같은 폴더 또는
+# PATH 에서 찾아야 한다. 없으면 "SDL2.dll 이 없어 코드 실행을 진행할 수 없습니다"
+# 오류로 창이 뜨지 않는다. 빌드 후 SDL2.dll 을 출력 디렉터리로 복사해
+# 더블클릭만으로 실행되도록 한다. (build_sim/ 은 .gitignore 라 DLL 은 커밋 안 됨)
+if(WIN32)
+    find_file(SDL2_RUNTIME_DLL
+        NAMES SDL2.dll
+        HINTS "${SDL2_DIR}/../../../bin"   # 예: C:/msys64/mingw64/bin
+        PATHS ENV PATH
+    )
+    if(SDL2_RUNTIME_DLL)
+        add_custom_command(TARGET lvgl_simulator POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                "${SDL2_RUNTIME_DLL}" "$<TARGET_FILE_DIR:lvgl_simulator>"
+            COMMENT "Copying SDL2.dll -> $<TARGET_FILE_DIR:lvgl_simulator> (런타임 로딩)")
+    else()
+        message(WARNING
+            "SDL2.dll 을 찾지 못해 자동 복사를 건너뜁니다. 실행 시 DLL 오류가 나면 "
+            "C:/msys64/mingw64/bin 을 PATH 에 추가하거나 SDL2.dll 을 exe 옆에 복사하세요.")
+    endif()
+endif()
