@@ -11,7 +11,12 @@
 #include <stdio.h>
 #include <unistd.h>
 
-#include "lvgl/lvgl.h"
+/* SDL2main 의 WinMain 래핑을 쓰지 않고 표준 main() 을 그대로 진입점으로 사용.
+ * (LVGL 헤더가 내부적으로 SDL.h 를 include 하므로 그 전에 정의해야 한다.) */
+#define SDL_MAIN_HANDLED
+
+#include <SDL2/SDL.h>
+#include "lvgl.h"
 
 /* 타깃 실기 해상도(카드 8.3항) — 1024x600 고정 */
 #define SIM_HOR_RES 1024
@@ -35,6 +40,9 @@ static void create_hello_ui(void)
 
 int main(void)
 {
+    /* SDL2main 을 우회했으므로 SDL 초기화 준비를 명시적으로 알린다. */
+    SDL_SetMainReady();
+
     /* 1. LVGL 코어 초기화 */
     lv_init();
 

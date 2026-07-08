@@ -36,6 +36,11 @@ endif()
 
 # --- LVGL (FetchContent, 대량 vendoring 회피) --------------------------------
 include(FetchContent)
+
+# LVGL 예제/데모/ThorVG 는 시뮬레이터 스캐폴딩에 불필요 → 빌드 대상에서 제외
+set(LV_CONF_BUILD_DISABLE_EXAMPLES ON CACHE BOOL "" FORCE)
+set(LV_CONF_BUILD_DISABLE_DEMOS    ON CACHE BOOL "" FORCE)
+
 FetchContent_Declare(
     lvgl
     GIT_REPOSITORY https://github.com/lvgl/lvgl.git
@@ -43,6 +48,15 @@ FetchContent_Declare(
     GIT_SHALLOW    TRUE
 )
 FetchContent_MakeAvailable(lvgl)
+
+# LVGL custom.cmake 는 ARM 전용 어셈블리(*.S: helium/neon)를 무조건 glob 한다.
+# x86(MinGW) 어셈블러는 이 파일이 include 하는 C 헤더 typedef 를 처리하지 못해
+# 빌드가 실패하므로, PC 시뮬레이터 빌드에서는 .S 소스를 lvgl 타깃에서 제외한다.
+get_target_property(_lvgl_sources lvgl SOURCES)
+if(_lvgl_sources)
+    list(FILTER _lvgl_sources EXCLUDE REGEX "\\.[sS]$")
+    set_target_properties(lvgl PROPERTIES SOURCES "${_lvgl_sources}")
+endif()
 
 # --- 시뮬레이터 실행 파일 ----------------------------------------------------
 # 이번 회차 소스: main.c (hello 템플릿). T-303 이후 ui_screens.c 추가 예정:
@@ -56,7 +70,10 @@ target_include_directories(lvgl_simulator PRIVATE
     ${SDL2_INCLUDE_DIRS}
 )
 
-target_link_libraries(lvgl_simulator PRIVATE
-    lvgl
-    ${SDL2_LIBRARIES}
-)
+# SDL2::SDL2 (core) 만 링크한다. SDL2::SDL2main 을 링크하면 WinMain 래퍼가
+# SDL_main 심볼을 요구하므로, main.c 에서 SDL_MAIN_HANDLED 로 우회하고 core 만 쓴다.
+if(TARGET SDL2::SDL2)
+    target_link_libraries(lvgl_simulator PRIVATE lvgl SDL2::SDL2)
+else()
+    target_link_libraries(lvgl_simulator PRIVATE lvgl ${SDL2_LIBRARIES})
+endif()
