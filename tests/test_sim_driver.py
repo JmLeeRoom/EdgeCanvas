@@ -114,6 +114,12 @@ def test_start_kills_leftover_ghost_process_before_launching_fresh_one(driver: S
         try:
             assert driver.is_running()
             assert driver.process is not None
+            # start() 자신이 선제 정리로 기존 고스트를 실제로 강제 종료해야 한다.
+            assert ghost.poll() is not None, (
+                "start()의 선제 kill_leftover_processes()가 기존 고스트 프로세스를 "
+                "종료하지 못했습니다(카드 12항 미충족)."
+            )
+            # 그리고 별개의 새 프로세스로 새로 기동되어야 한다.
             assert driver.process.pid != ghost.pid
         finally:
             driver.stop()

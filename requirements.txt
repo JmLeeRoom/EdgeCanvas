@@ -2,6 +2,7 @@ typer
 pydantic
 langchain-upstage
 opencv-python
+pillow
 requests
 pytest
 black
