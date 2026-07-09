@@ -33,14 +33,6 @@ SPEC_EXTRACTION_QUERY_KEYWORDS: list[str] = [
     "format",
 ]
 
-_REQUIRED_FIELDS = (
-    "lcd_controller",
-    "touch_ic",
-    "resolution_width",
-    "resolution_height",
-)
-
-
 def build_spec_extraction_prompt(chunks: list[Chunk]) -> str:
     """검색된 청크들을 근거(context)로 붙여 Solar Pro용 RAG 프롬프트를 만든다.
 

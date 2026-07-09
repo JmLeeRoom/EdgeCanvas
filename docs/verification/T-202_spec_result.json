@@ -1,7 +1,7 @@
 {
   "task": "T-202",
-  "mode": "offline_stub",
-  "reason": "실 환경(Python 3.14)에서 langchain-upstage의 의존 패키지 tokenizers가 PyO3/maturin 빌드를 지원하지 않아 pip install이 실패하여 ChatUpstage를 임포트할 수 없었다(T-201 live 테스트에서도 동일 원인으로 선행 실패 확인됨). 이는 환경 제약이며 T-202 구현 코드의 문제가 아니다. 대신 retrieval -> 프롬프트 생성 -> (stub) LLM 응답 -> 파싱까지의 전체 파이프라인을 오프라인으로 검증했다.",
+  "mode": "live_api",
+  "reason": "Pass 2에서 .venv(Python 3.13, langchain-upstage 정상 설치)로 재검증함. Pass 1 구현자는 전역 Python 3.14 환경에서 langchain-upstage의 의존 패키지 tokenizers가 PyO3/maturin 빌드를 지원하지 않아 ChatUpstage 임포트에 실패했고(T-201 때와 동일 패턴), 이로 인해 'offline_stub'으로 잘못 기록했었다. .venv\\Scripts\\python.exe로 실행한 결과 test_extract_specs_live_api_finds_required_fields를 포함해 tests/test_spec_extractor.py 11개 테스트가 전부 PASSED했으며(9.52초), 아래는 실제 Solar Pro API가 반환한 라이브 추출 결과다.",
   "retrieved_chunk_indices": [
     1,
     2,
@@ -10,22 +10,22 @@
   "extracted_specs": {
     "lcd_controller": {
       "value": "ILI9488",
-      "confidence": 0.95,
+      "confidence": 1.0,
       "assumed": false
     },
     "touch_ic": {
       "value": "FT6236",
-      "confidence": 0.9,
+      "confidence": 1.0,
       "assumed": false
     },
     "resolution_width": {
       "value": "320",
-      "confidence": 0.9,
+      "confidence": 1.0,
       "assumed": false
     },
     "resolution_height": {
       "value": "480",
-      "confidence": 0.9,
+      "confidence": 1.0,
       "assumed": false
     }
   }
