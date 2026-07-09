@@ -128,6 +128,25 @@ def test_raw_dict_empty_input_still_instantiates_with_defaults():
     assert kb.pin_config == {}
 
 
+def test_raw_dict_t202_safe_default_resolution_falls_back_to_waveshare_default():
+    """T-202 미검출 시 안전 기본값(`{"value": "", ...}`)으로 resolution 폭/높이가
+    빈 문자열로 들어와도 인스턴스화가 실패하지 않고 Waveshare 1024x600으로
+    폴백해야 한다(12항 대책, spec_extractor._SAFE_DEFAULT_FIELD 계약 반영)."""
+    raw = {
+        "lcd_controller": {"value": "ILI9488", "confidence": 0.9, "assumed": False},
+        "touch_ic": {"value": "", "confidence": 0.0, "assumed": True},
+        "resolution_width": {"value": "", "confidence": 0.0, "assumed": True},
+        "resolution_height": {"value": "", "confidence": 0.0, "assumed": True},
+        "data_format": {"value": "", "confidence": 0.0, "assumed": True},
+    }
+
+    kb = raw_dict_to_technology_kb(raw)
+
+    assert kb.resolution == DEFAULT_RESOLUTION
+    assert kb.resolution == (1024, 600)
+    assert kb.display_controller == "ILI9488"
+
+
 # ---------------------------------------------------------------------------
 # 4) DoD(11-b): 변환된 JSON 파일 형상이 tests/data/expected_kb.json과 구조적으로 100% 동등
 # ---------------------------------------------------------------------------

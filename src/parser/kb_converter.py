@@ -77,7 +77,10 @@ def raw_dict_to_technology_kb(raw: dict) -> TechnologyKB:
     else:
         width = _extract_value(raw, "resolution_width", default=None)
         height = _extract_value(raw, "resolution_height", default=None)
-        if width is not None and height is not None:
+        # T-202 미검출 시 안전 기본값은 빈 문자열("")이므로(spec_extractor
+        # _SAFE_DEFAULT_FIELD), 빈 값은 "누락"으로 간주해 resolution kwarg를
+        # 넘기지 않고 Default Factory(Waveshare 1024x600)로 폴백시킨다(12항 대책).
+        if width not in (None, "") and height not in (None, ""):
             kwargs["resolution"] = (width, height)
 
     if "pin_config" in raw and raw["pin_config"] is not None:
