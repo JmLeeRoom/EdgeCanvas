@@ -1,0 +1,7 @@
+{
+  "display_controller": "ILI9488",
+  "resolution": [1024, 600],
+  "color_depth": "RGB565",
+  "touch_ic": "FT6236",
+  "pin_config": {}
+}
