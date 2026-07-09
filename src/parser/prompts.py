@@ -46,15 +46,16 @@ def build_spec_extraction_prompt(chunks: list[Chunk]) -> str:
     )
 
     return f"""당신은 하드웨어 데이터시트 분석 전문가입니다. 아래 데이터시트 발췌
-(청크)를 근거로, 다음 4개 하드웨어 스펙 필드를 추출하세요.
+(청크)를 근거로, 다음 5개 하드웨어 스펙 필드를 추출하세요.
 
 - lcd_controller: LCD 컨트롤러 칩셋 모델명
 - touch_ic: 터치 컨트롤러 IC 모델명
 - resolution_width: 디스플레이 가로 해상도(픽셀, 숫자만)
 - resolution_height: 디스플레이 세로 해상도(픽셀, 숫자만)
+- data_format: 디스플레이 데이터 포맷(예: RGB565, RGB888, MIPI-DSI 등)
 
-또한 SPI/MIPI 인터페이스 타이밍, 핀 매핑, 데이터 포맷 등 관련 정보가 있으면
-근거로 활용하되, 위 4개 필드 이외의 값은 만들어내지 마세요.
+또한 SPI/MIPI 인터페이스 타이밍, 핀 매핑 등 관련 정보가 있으면 근거로
+활용하되, 위 5개 필드 이외의 값은 만들어내지 마세요.
 
 중요한 규칙(반드시 준수):
 1. 근거 텍스트에 명확히 등장하지 않는 값은 임의로 상상해서 채우지 마세요.
@@ -70,7 +71,8 @@ def build_spec_extraction_prompt(chunks: list[Chunk]) -> str:
   "lcd_controller": {{"value": "...", "confidence": 0.0, "assumed": false}},
   "touch_ic": {{"value": "...", "confidence": 0.0, "assumed": false}},
   "resolution_width": {{"value": "...", "confidence": 0.0, "assumed": false}},
-  "resolution_height": {{"value": "...", "confidence": 0.0, "assumed": false}}
+  "resolution_height": {{"value": "...", "confidence": 0.0, "assumed": false}},
+  "data_format": {{"value": "...", "confidence": 0.0, "assumed": false}}
 }}
 
 --- 데이터시트 발췌 (근거) ---

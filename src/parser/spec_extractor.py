@@ -6,10 +6,10 @@
   순수 파이썬 TF 스코어링으로 스펙 관련 청크를 랭킹해 상위 N개만 골라내는
   유사도 벡터 검색 모의(mock retrieval) 로직. API 키 없이 단위 테스트 가능.
 - `build_spec_extraction_prompt`(prompts.py): Solar Pro용 RAG 프롬프트 템플릿.
-- `parse_spec_response`: LLM 응답(JSON 텍스트)을 파싱해 4대 필수 필드
-  (lcd_controller, touch_ic, resolution_width, resolution_height)를
-  안전하게 추출한다. 파싱 실패/필드 누락 시 빈 문자열/None + confidence=0.0
-  + assumed=True로 안전 처리한다(11-b항 DoD).
+- `parse_spec_response`: LLM 응답(JSON 텍스트)을 파싱해 5대 필수 필드
+  (lcd_controller, touch_ic, resolution_width, resolution_height,
+  data_format)를 안전하게 추출한다. 파싱 실패/필드 누락 시 빈 문자열/None
+  + confidence=0.0 + assumed=True로 안전 처리한다(11-b항 DoD).
 - `extract_specs`: retrieval -> 프롬프트 생성 -> LLM 호출 -> 파싱까지
   잇는 상위 진입점. `client`(예: UpstageClient)는 `chat(message: str) -> str`
   인터페이스만 만족하면 되므로 테스트에서는 stub으로 대체 가능하다.
@@ -33,6 +33,7 @@ REQUIRED_SPEC_FIELDS: tuple[str, ...] = (
     "touch_ic",
     "resolution_width",
     "resolution_height",
+    "data_format",
 )
 
 _SAFE_DEFAULT_FIELD: dict = {"value": "", "confidence": 0.0, "assumed": True}
@@ -107,7 +108,7 @@ def _coerce_field(raw: object) -> dict:
 
 
 def parse_spec_response(llm_response: str) -> dict:
-    """Solar Pro 응답 텍스트를 파싱해 4대 필수 필드 딕셔너리를 반환한다.
+    """Solar Pro 응답 텍스트를 파싱해 5대 필수 필드 딕셔너리를 반환한다.
 
     응답이 JSON이 아니거나 일부 필드가 빠져 있어도 KeyError 없이 항상
     `REQUIRED_SPEC_FIELDS` 전체가 채워진 딕셔너리를 반환한다(11-b항 DoD:
@@ -130,7 +131,7 @@ def parse_spec_response(llm_response: str) -> dict:
 
 
 def extract_specs(chunks: list[Chunk], *, client, top_n: int = 5) -> dict:
-    """청크 리스트에서 RAG로 하드웨어 핵심 스펙 4종을 추출한다.
+    """청크 리스트에서 RAG로 하드웨어 핵심 스펙 5종을 추출한다.
 
     1) `retrieve_relevant_chunks`로 스펙 관련 청크만 상위 `top_n`개 선별한다.
     2) 선별된 청크로 RAG 프롬프트를 구성한다.

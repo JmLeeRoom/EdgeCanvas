@@ -4,8 +4,8 @@
 - 오프라인(API 불필요): 키워드 기반 유사도 검색(retrieval) 랭킹 로직,
   프롬프트 템플릿 생성, 결과 파싱(안전 처리/신뢰도 라벨링).
 - 라이브(@REQUIRES_LIVE_API): 실제 Solar Pro API로 하드코딩된 데이터시트
-  청크 fixture에서 4대 핵심 필드(lcd_controller, touch_ic,
-  resolution_width, resolution_height)를 추출한다.
+  청크 fixture에서 5대 핵심 필드(lcd_controller, touch_ic,
+  resolution_width, resolution_height, data_format)를 추출한다.
 """
 import os
 
@@ -106,6 +106,7 @@ def test_build_spec_extraction_prompt_includes_chunk_text_and_instructions(sampl
     assert "FT6236" in prompt
     # 지시사항: 해상도/데이터 포맷/터치 컨트롤러 모델명을 추리라는 내용이 포함되어야 한다.
     assert "해상도" in prompt
+    assert "데이터 포맷" in prompt
     assert "터치" in prompt
     # 신뢰도/가정 라벨 요구 (12항 Hallucination 대책)가 프롬프트에 명시되어야 한다.
     assert "신뢰도" in prompt
@@ -122,12 +123,19 @@ def test_parse_spec_response_extracts_all_required_fields():
       "lcd_controller": {"value": "ILI9488", "confidence": 0.95, "assumed": false},
       "touch_ic": {"value": "FT6236", "confidence": 0.9, "assumed": false},
       "resolution_width": {"value": "320", "confidence": 0.9, "assumed": false},
-      "resolution_height": {"value": "480", "confidence": 0.9, "assumed": false}
+      "resolution_height": {"value": "480", "confidence": 0.9, "assumed": false},
+      "data_format": {"value": "RGB565", "confidence": 0.9, "assumed": false}
     }
     """
     result = parse_spec_response(llm_response)
 
-    for key in ("lcd_controller", "touch_ic", "resolution_width", "resolution_height"):
+    for key in (
+        "lcd_controller",
+        "touch_ic",
+        "resolution_width",
+        "resolution_height",
+        "data_format",
+    ):
         assert key in result
         assert result[key]["value"] != ""
         assert result[key]["value"] is not None
@@ -136,13 +144,20 @@ def test_parse_spec_response_extracts_all_required_fields():
     assert result["touch_ic"]["value"] == "FT6236"
     assert result["resolution_width"]["value"] == "320"
     assert result["resolution_height"]["value"] == "480"
+    assert result["data_format"]["value"] == "RGB565"
 
 
 def test_parse_spec_response_malformed_json_returns_safe_defaults():
     """12항 DoD(b): 오검출/파싱 실패 시 빈 문자열/None으로 안전 처리해야 한다."""
     result = parse_spec_response("이건 JSON이 아닌 자유 텍스트 응답입니다.")
 
-    for key in ("lcd_controller", "touch_ic", "resolution_width", "resolution_height"):
+    for key in (
+        "lcd_controller",
+        "touch_ic",
+        "resolution_width",
+        "resolution_height",
+        "data_format",
+    ):
         assert key in result
         assert result[key]["value"] in ("", None)
         assert result[key]["confidence"] == 0.0
@@ -155,7 +170,7 @@ def test_parse_spec_response_missing_field_defaults_to_safe_value():
     result = parse_spec_response(llm_response)
 
     assert result["lcd_controller"]["value"] == "ILI9488"
-    for key in ("touch_ic", "resolution_width", "resolution_height"):
+    for key in ("touch_ic", "resolution_width", "resolution_height", "data_format"):
         assert result[key]["value"] in ("", None)
         assert result[key]["assumed"] is True
 
@@ -167,7 +182,8 @@ def test_parse_spec_response_low_confidence_marked_as_assumed():
       "lcd_controller": {"value": "아마도 ILI9341", "confidence": 0.2, "assumed": true},
       "touch_ic": {"value": "FT6236", "confidence": 0.9, "assumed": false},
       "resolution_width": {"value": "320", "confidence": 0.9, "assumed": false},
-      "resolution_height": {"value": "480", "confidence": 0.9, "assumed": false}
+      "resolution_height": {"value": "480", "confidence": 0.9, "assumed": false},
+      "data_format": {"value": "RGB565", "confidence": 0.9, "assumed": false}
     }
     """
     result = parse_spec_response(llm_response)
@@ -196,7 +212,8 @@ def test_extract_specs_end_to_end_with_stub_client(sample_chunks):
       "lcd_controller": {"value": "ILI9488", "confidence": 0.95, "assumed": false},
       "touch_ic": {"value": "FT6236", "confidence": 0.9, "assumed": false},
       "resolution_width": {"value": "320", "confidence": 0.9, "assumed": false},
-      "resolution_height": {"value": "480", "confidence": 0.9, "assumed": false}
+      "resolution_height": {"value": "480", "confidence": 0.9, "assumed": false},
+      "data_format": {"value": "RGB565", "confidence": 0.9, "assumed": false}
     }
     """
     client = _FakeUpstageClient(canned)
@@ -207,6 +224,7 @@ def test_extract_specs_end_to_end_with_stub_client(sample_chunks):
         "touch_ic",
         "resolution_width",
         "resolution_height",
+        "data_format",
     ):
         assert key in result
         assert result[key]["value"] != ""
@@ -221,6 +239,7 @@ def test_extract_specs_empty_chunks_returns_safe_defaults():
         "touch_ic",
         "resolution_width",
         "resolution_height",
+        "data_format",
     ):
         assert key in result
         assert result[key]["value"] in ("", None)
@@ -242,6 +261,7 @@ def test_extract_specs_live_api_finds_required_fields(sample_chunks):
         "touch_ic",
         "resolution_width",
         "resolution_height",
+        "data_format",
     ):
         assert key in result
         assert result[key]["value"] not in ("", None)
