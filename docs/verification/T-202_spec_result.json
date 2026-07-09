@@ -1,0 +1,37 @@
+{
+  "task": "T-202",
+  "mode": "live_api",
+  "reason": "5번째 필수 필드(data_format) 추가 후 .venv(Python 3.13, langchain-upstage 정상 설치)로 재검증함. .venv\\Scripts\\python.exe로 실행한 결과 test_extract_specs_live_api_finds_required_fields를 포함해 tests/test_spec_extractor.py 11개 테스트가 전부 PASSED했으며(4.18초), 아래는 실제 Solar Pro API가 반환한 5개 필드(lcd_controller, touch_ic, resolution_width, resolution_height, data_format) 라이브 추출 결과다.",
+  "retrieved_chunk_indices": [
+    1,
+    2,
+    3
+  ],
+  "extracted_specs": {
+    "lcd_controller": {
+      "value": "ILI9488",
+      "confidence": 1.0,
+      "assumed": false
+    },
+    "touch_ic": {
+      "value": "FT6236",
+      "confidence": 1.0,
+      "assumed": false
+    },
+    "resolution_width": {
+      "value": "320",
+      "confidence": 1.0,
+      "assumed": false
+    },
+    "resolution_height": {
+      "value": "480",
+      "confidence": 1.0,
+      "assumed": false
+    },
+    "data_format": {
+      "value": "RGB565",
+      "confidence": 1.0,
+      "assumed": false
+    }
+  }
+}
