@@ -1,0 +1,55 @@
+{
+  "var": "scr",
+  "type": "screen",
+  "children": [
+    {
+      "var": "panel",
+      "type": "obj",
+      "children": [
+        {
+          "var": "submit_btn",
+          "type": "button",
+          "children": [
+            {
+              "var": "submit_label",
+              "type": "label",
+              "children": [],
+              "event_handlers": []
+            }
+          ],
+          "event_handlers": [
+            "submit_event_handler"
+          ]
+        },
+        {
+          "var": "cancel_btn",
+          "type": "button",
+          "children": [],
+          "event_handlers": [
+            "cancel_event_handler"
+          ]
+        },
+        {
+          "var": "hint_label",
+          "type": "label",
+          "children": [],
+          "event_handlers": []
+        }
+      ],
+      "event_handlers": []
+    },
+    {
+      "var": "title",
+      "type": "label",
+      "children": [],
+      "event_handlers": []
+    },
+    {
+      "var": "footer",
+      "type": "label",
+      "children": [],
+      "event_handlers": []
+    }
+  ],
+  "event_handlers": []
+}
