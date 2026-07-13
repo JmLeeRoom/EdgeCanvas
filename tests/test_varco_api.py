@@ -19,12 +19,16 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from src.agent.varco_art import (  # noqa: E402
+    DEFAULT_API_BASE,
+    DEFAULT_ENDPOINT,
     PNG_MAGIC,
+    VARCO_IMAGE_TO_3D_PATH,
     build_generation_payload,
     extract_image_bytes,
     is_valid_png,
     make_placeholder_png,
     request_image,
+    resolve_varco_endpoint,
     save_image_bytes,
 )
 
@@ -37,6 +41,46 @@ REQUIRES_LIVE_API = pytest.mark.skipif(
 ASSETS_DIR = Path(__file__).parent / "data" / "varco_received"
 
 BUTTON_PROMPT = "100x50 size blue rectangular submit button image"
+
+
+# ---------------------------------------------------------------------------
+# 엔드포인트 해석 (openapi.ai.nc.com 기본값 / 환경변수 오버라이드)
+# ---------------------------------------------------------------------------
+def test_default_endpoint_uses_openapi_ai_nc_com():
+    """기본 엔드포인트는 openapi.ai.nc.com/3d/varco/v1/image-to-3d 이어야 한다."""
+    assert DEFAULT_API_BASE == "https://openapi.ai.nc.com"
+    assert VARCO_IMAGE_TO_3D_PATH == "/3d/varco/v1/image-to-3d"
+    assert DEFAULT_ENDPOINT == "https://openapi.ai.nc.com/3d/varco/v1/image-to-3d"
+
+
+def test_resolve_varco_endpoint_defaults(monkeypatch):
+    """환경변수 미설정 시 기본 전체 엔드포인트를 반환한다."""
+    monkeypatch.delenv("NC_VARCO_API_URL", raising=False)
+    monkeypatch.delenv("NC_VARCO_API_BASE", raising=False)
+    assert resolve_varco_endpoint() == DEFAULT_ENDPOINT
+
+
+def test_resolve_varco_endpoint_full_url_env(monkeypatch):
+    """NC_VARCO_API_URL이 설정되면 전체 URL 오버라이드가 최우선이다."""
+    monkeypatch.setenv("NC_VARCO_API_URL", "https://custom.example.com/v1/generate")
+    monkeypatch.setenv("NC_VARCO_API_BASE", "https://ignored.example.com")
+    assert resolve_varco_endpoint() == "https://custom.example.com/v1/generate"
+
+
+def test_resolve_varco_endpoint_base_plus_path(monkeypatch):
+    """NC_VARCO_API_URL 미설정 시 NC_VARCO_API_BASE + 기본 path를 조합한다."""
+    monkeypatch.delenv("NC_VARCO_API_URL", raising=False)
+    monkeypatch.setenv("NC_VARCO_API_BASE", "https://staging.openapi.ai.nc.com")
+    assert (
+        resolve_varco_endpoint()
+        == "https://staging.openapi.ai.nc.com/3d/varco/v1/image-to-3d"
+    )
+
+
+def test_resolve_varco_endpoint_url_arg_overrides_env(monkeypatch):
+    """url 인자가 환경변수보다 우선한다."""
+    monkeypatch.setenv("NC_VARCO_API_URL", "https://env.example.com/api")
+    assert resolve_varco_endpoint(url="https://arg.example.com/api") == "https://arg.example.com/api"
 
 
 # ---------------------------------------------------------------------------

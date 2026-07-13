@@ -1,16 +1,20 @@
 """T-010 스파이크: NC AI VARCO Art 이미지 생성 API 접속 검증.
 
 단위구현계획서.md 제5장 [T-010] 8항 구현 내용을 따른다.
-"100x50 파란색 사각형 전송 버튼 이미지" 프롬프트를 VARCO Art 이미지 생성 REST API에
+"100x50 파란색 사각형 전송 버튼 이미지" 프롬프트를 VARCO 이미지(3D) 생성 REST API에
 `requests`로 POST 하고, 응답(JSON 링크/base64 또는 raw 바이너리)을 로컬 PNG로 저장한다.
+
+기본 엔드포인트: ``https://openapi.ai.nc.com/3d/varco/v1/image-to-3d``
+(다른 NC OpenAPI 예: ``https://openapi.ai.nc.com/mt/chat-content/v1/translate``)
 
 카드 12항(Placeholder Fallback): 권한 미획득/서비스 중단 등 네트워크 에러 시 [가정]을
 기각하고, 단순 색상 채우기 placeholder PNG를 로컬에서 생성해 파이프라인을 잇는다.
 
 설정은 모두 환경변수로 읽는다(코딩표준: 키/엔드포인트를 코드·로그에 남기지 않는다):
-- NC_VARCO_API_KEY : 인증 토큰 (없으면 라이브 호출 스킵 → fallback)
-- NC_VARCO_API_URL : 이미지 생성 엔드포인트 URL (미지정 시 문서화된 기본값 사용)
-- NC_VARCO_MODEL   : 사용 모델 식별자(선택)
+- NC_VARCO_API_KEY  : 인증 토큰 (없으면 라이브 호출 스킵 → fallback)
+- NC_VARCO_API_URL  : 전체 엔드포인트 URL 오버라이드 (최우선)
+- NC_VARCO_API_BASE : 베이스 URL만 오버라이드 (``NC_VARCO_API_URL`` 미설정 시 path와 조합)
+- NC_VARCO_MODEL    : 사용 모델 식별자(선택)
 """
 from __future__ import annotations
 
@@ -25,9 +29,34 @@ import requests
 # 카드 11 DoD: PNG 매직 넘버 (89 50 4E 47 0D 0A 1A 0A).
 PNG_MAGIC = b"\x89PNG\r\n\x1a\n"
 
-# NC AI 콘솔에서 발급받은 이미지 생성 엔드포인트를 환경변수로 주입한다.
-# 명세가 확정되기 전까지는 아래 기본값을 사용하되, 실제 값은 .env로 오버라이드한다.
-DEFAULT_ENDPOINT = "https://api.nc-ai.com/v1/varco-art/generations"
+# NC OpenAPI (openapi.ai.nc.com) VARCO 이미지(3D) 생성 엔드포인트.
+# 전체 URL·베이스 URL은 환경변수로 오버라이드 가능(아래 resolve_varco_endpoint 참고).
+DEFAULT_API_BASE = "https://openapi.ai.nc.com"
+VARCO_IMAGE_TO_3D_PATH = "/3d/varco/v1/image-to-3d"
+DEFAULT_ENDPOINT = f"{DEFAULT_API_BASE}{VARCO_IMAGE_TO_3D_PATH}"
+
+
+def resolve_varco_endpoint(
+    url: str | None = None,
+    base: str | None = None,
+    path: str | None = None,
+) -> str:
+    """VARCO 이미지(3D) 생성 엔드포인트 URL을 인자·환경변수·기본값 순으로 결정한다.
+
+    우선순위:
+    1. ``url`` 인자 또는 ``NC_VARCO_API_URL`` (전체 URL 오버라이드)
+    2. ``base``/``NC_VARCO_API_BASE`` + ``path``/``VARCO_IMAGE_TO_3D_PATH``
+    3. ``DEFAULT_ENDPOINT``
+    """
+    full_url = url or os.getenv("NC_VARCO_API_URL")
+    if full_url:
+        return full_url.strip().rstrip("/")
+
+    api_base = (base or os.getenv("NC_VARCO_API_BASE") or DEFAULT_API_BASE).strip().rstrip("/")
+    api_path = path or VARCO_IMAGE_TO_3D_PATH
+    if not api_path.startswith("/"):
+        api_path = f"/{api_path}"
+    return f"{api_base}{api_path}"
 
 
 def build_generation_payload(
@@ -154,7 +183,7 @@ def request_image(
     - reason        : 실패/fallback 사유(있을 때)
     """
     api_key = api_key or os.getenv("NC_VARCO_API_KEY")
-    endpoint = endpoint or os.getenv("NC_VARCO_API_URL") or DEFAULT_ENDPOINT
+    endpoint = resolve_varco_endpoint(url=endpoint)
     model = model or os.getenv("NC_VARCO_MODEL")
     dst = Path(save_path)
 

@@ -18,9 +18,11 @@
 스파이크 로직을 둔 방식과 동일한 배치).
 
 1. `build_generation_payload` — 프롬프트 + 100x50 크기 요청 바디 구성 (8-2).
-2. `request_image` — `requests.post`로 이미지 생성 엔드포인트 호출. 인증 토큰·엔드포인트·
-   모델은 전부 `os.environ`(`NC_VARCO_API_KEY` / `NC_VARCO_API_URL` / `NC_VARCO_MODEL`)에서
-   읽으며 코드·로그에 남기지 않는다(코딩표준 §Python).
+2. `request_image` — `requests.post`로 이미지(3D) 생성 엔드포인트 호출. 기본 URL은
+   `https://openapi.ai.nc.com/3d/varco/v1/image-to-3d`이며, `resolve_varco_endpoint`가
+   `NC_VARCO_API_URL`(전체 URL) 또는 `NC_VARCO_API_BASE`+path로 오버라이드한다.
+   인증 토큰·모델은 `os.environ`(`NC_VARCO_API_KEY` / `NC_VARCO_MODEL`)에서 읽으며
+   코드·로그에 남기지 않는다(코딩표준 §Python).
 3. `extract_image_bytes` — 응답 JSON의 base64(`data`/`b64_json`) 또는 이미지 URL(`url`/
    `image_url`/`link`), 또는 raw `image/*` 바이너리 세 경로를 모두 처리 (8-3).
 4. `save_image_bytes` — PNG 매직넘버 검증 후 디스크 저장 (10 통과 기준).
@@ -33,7 +35,7 @@
   API 키 없이 항상 실행·통과한다.
 - 라이브 테스트(`@REQUIRES_LIVE_API`, `NC_VARCO_API_KEY` 키드)는 키가 있을 때만 실제
   VARCO Art API를 호출해 온전한 PNG 저장을 검증한다.
-- 실행 결과: **11 passed, 1 skipped** (skip 사유: NC_VARCO_API_KEY 미설정).
+- 실행 결과 (2026-07-13): **17 passed** (NC_VARCO_API_KEY 설정 시 라이브 포함; 당회 401→fallback).
 
 ## 4. 접속 상태 및 결론 — Go/No-Go
 
@@ -74,10 +76,23 @@
   placeholder PNG**(100x50 파란색)를 저장했다. 키 확보 후 재실행 시 라이브 생성 이미지로 대체.
 - `docs/verification/T-010_pytest.txt` — pytest 실행 로그.
 
+## 8. 엔드포인트 마이그레이션 후속 (2026-07-13 KST)
+
+- 브랜치: `feature/T-010-varco-endpoint` (커밋 `2c5b2ff`)
+- 기본/권장 URL: `https://openapi.ai.nc.com/3d/varco/v1/image-to-3d` (`NC_VARCO_API_URL`로 오버라이드 가능)
+- pytest: `python -m pytest tests/test_varco_api.py -v` → **17 passed** (로그: `T-010_pytest.txt`)
+- 라이브 (`test_varco_art_live_generation`, 키는 `.env`에만 존재·로그에 미출력):
+  - `ok`: false
+  - `status_code`: 401
+  - `used_fallback`: true
+  - `reason`: HTTP 401 (엔드포인트 도달 가능, 인증/권한 미해결)
+- 결론: 엔드포인트 코드 변경은 PR로 반영; 라이브 200/201 DoD는 **Pending** (NC 측 키/권한 확인 필요).
+
 ## 8. 재현 방법
 
 ```
 python -m pytest tests/test_varco_api.py -v
 ```
-- 라이브 검증: `.env`에 `NC_VARCO_API_KEY`(및 필요 시 `NC_VARCO_API_URL`)를 채우면
-  `@REQUIRES_LIVE_API` 테스트가 활성화되어 실제 API를 호출한다.
+- 라이브 검증: `.env`에 `NC_VARCO_API_KEY`(및 필요 시 `NC_VARCO_API_URL` 또는
+  `NC_VARCO_API_BASE`)를 채우면 `@REQUIRES_LIVE_API` 테스트가 활성화되어
+  `https://openapi.ai.nc.com/3d/varco/v1/image-to-3d`(또는 오버라이드 URL)로 실제 API를 호출한다.
