@@ -1,0 +1,65 @@
+T-003 검증 기록 — ESP-IDF v5.3+ 개발 환경 구축
+생성 시각: 2026-07-13T15:10:00+09:00
+브랜치: feature/T-003-idf-env
+
+## 선행 Task (T-703) 상태
+- main 브랜치에 T-703 관련 머지 커밋 없음 (착수전).
+- 워크플로 규칙상 선행 위반. 본 Pass 1은 사용자 명시 요청에 따라 repo-side 산출물만 구현.
+
+## 실환경 ESP-IDF 검사
+
+### 설치 경로 존재 여부
+C:\Espressif\frameworks\esp-idf-v5.3 : False (미설치)
+
+### idf.py --version (실제 터미널)
+```
+idf.py NOT FOUND on PATH
+```
+
+### 크로스 컴파일러 PATH
+```
+xtensa-esp32-elf-gcc : NOT FOUND
+riscv32-esp-elf-gcc  : NOT FOUND
+```
+
+### diagnose_idf_environment() (실환경, 보드 불필요)
+```
+status: FAIL
+message: idf.py를 찾을 수 없습니다. ESP-IDF 설치 후 `scripts/export_idf_env.ps1` 을 실행하거나 `C:\Espressif\frameworks\esp-idf-v5.3` 의 export.ps1/export.bat을 소싱하세요.
+xtensa_gcc_found: False
+riscv_gcc_found: False
+```
+
+> 본 개발 머신에는 ESP-IDF v5.3이 아직 설치되지 않았습니다.
+> 설치 후 `docs/setup/esp-idf-windows.md` 절차와 `scripts/export_idf_env.ps1` 로 재검증하세요.
+
+## pytest tests/test_idf_env.py -v
+```
+============================= test session starts =============================
+platform win32 -- Python 3.13.14, pytest-9.1.1, pluggy-1.6.0
+rootdir: D:\EdgeCanvas
+collected 8 items
+
+tests/test_idf_env.py::test_idf_not_found_returns_clear_failure_message PASSED
+tests/test_idf_env.py::test_parse_idf_version_accepts_v5_3_plus PASSED
+tests/test_idf_env.py::test_parse_idf_version_rejects_below_minimum PASSED
+tests/test_idf_env.py::test_diagnose_passes_with_fixture_idf_and_compilers_in_path PASSED
+tests/test_idf_env.py::test_diagnose_fails_when_cross_compilers_missing_from_path PASSED
+tests/test_idf_env.py::test_python_venv_conflict_suggests_install_bat_rerun PASSED
+tests/test_idf_env.py::test_export_script_references_default_idf_root PASSED
+tests/test_idf_env.py::test_setup_manual_documents_install_path_and_verification PASSED
+
+============================== 8 passed in 0.10s ==============================
+```
+
+## 산출물
+- docs/setup/esp-idf-windows.md (셋업 매뉴얼)
+- scripts/export_idf_env.ps1 (환경변수보내기)
+- src/common/idf_env.py (환경 진단 로직)
+- tests/test_idf_env.py (subprocess seam 단위 테스트)
+
+## DoD (실환경 기준 — ESP-IDF 미설치로 현재 미충족)
+- [ ] idf.py 호출 가능 — FAIL (미설치)
+- [ ] Xtensa/RISC-V 크로스 컴파일러 PATH 연동 — FAIL (미설치)
+
+자동 테스트(fixture) 기준 환경 진단 PASS/FAIL 로직은 8/8 통과.
