@@ -1,0 +1,40 @@
+T-304 Token Manager verification log
+====================================
+Date: 2026-07-14
+Branch: feature/T-304-token-manager
+Issue: #47
+
+Command:
+  .venv\Scripts\python.exe -m pytest tests/test_token_manager.py -v
+
+============================= test session starts =============================
+platform win32 -- Python 3.13.14, pytest-9.1.1, pluggy-1.6.0 -- D:\EdgeCanvas\.venv\Scripts\python.exe
+cachedir: .pytest_cache
+rootdir: D:\EdgeCanvas
+plugins: anyio-4.14.1, langsmith-0.9.8
+collecting ... collected 13 items
+
+tests/test_token_manager.py::test_count_tokens_positive_for_nonempty PASSED [  7%]
+tests/test_token_manager.py::test_count_tokens_empty_is_zero PASSED      [ 15%]
+tests/test_token_manager.py::test_count_tokens_grows_with_length PASSED  [ 23%]
+tests/test_token_manager.py::test_exceeds_threshold_false_under_budget PASSED [ 30%]
+tests/test_token_manager.py::test_exceeds_threshold_true_when_over_16k PASSED [ 38%]
+tests/test_token_manager.py::test_needs_trim_when_over_trim_target PASSED [ 46%]
+tests/test_token_manager.py::test_long_error_prompt_is_at_least_15000_chars PASSED [ 53%]
+tests/test_token_manager.py::test_trim_reduces_to_at_most_10000_tokens PASSED [ 61%]
+tests/test_token_manager.py::test_trim_preserves_critical_compiler_error_last_line PASSED [ 69%]
+tests/test_token_manager.py::test_trim_priority_drops_success_logs_first PASSED [ 76%]
+tests/test_token_manager.py::test_trim_priority_then_drops_duplicate_errors PASSED [ 84%]
+tests/test_token_manager.py::test_trim_priority_then_drops_system_example PASSED [ 92%]
+tests/test_token_manager.py::test_trim_never_drops_latest_critical_error_even_if_still_large PASSED [100%]
+
+============================= 13 passed in 0.55s ==============================
+
+--- sample context trim ---
+chars_before=135203 tokens_before=23956
+chars_after=15116 tokens_after=2417
+dropped_sections=['===PREVIOUS_SUCCESS_LOG===', '===DUPLICATE_ERROR_LOG===', '===SYSTEM_EXAMPLE_SOURCE===']
+critical_last_line_preserved=True
+trim_target_met=True
+
+pytest_exit_code=0
