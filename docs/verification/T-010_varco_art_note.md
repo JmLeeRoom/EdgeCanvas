@@ -65,7 +65,7 @@
 
 | DoD 항목 | 결과 | 근거 |
 |---|---|---|
-| VARCO Art API 호출 성공 200/201 수신 | **미충족(Pending)** | OPENAPI_KEY 헤더 적용 후 라이브 202(비동기 수락) 수신. 동기 200/201 PNG 미수신. |
+| VARCO Art API 호출 성공 200/201 수신 | **미충족(Pending)** | 202 비동기 수락·폴링 골격 구현. 라이브 poll URL 미확인으로 동기 PNG 미수신. |
 | 수신 바이너리가 온전한 PNG 구조(89 50 4E 47) 지님 | **충족(fallback 경로)** | `is_valid_png`로 매직넘버 검증. 본 산출물 `T-010_varco_art.png`(142 bytes)가 온전한 PNG임을 확인. |
 
 > 스파이크 성격상 "접근 가능 여부 진단 + 불가 시 대체 경로 수립"이 목적이며, 라이브 키
@@ -102,6 +102,22 @@
   - `used_fallback`: true
   - `reason`: HTTP 202 (인증 통과·비동기 수락으로 추정; 200/201 동기 PNG 미수신)
 - 결론: 401→202로 인증 개선 확인. 라이브 200/201 동기 PNG DoD는 **Pending** (202 비동기 응답 처리 또는 NC API 규격 추가 확인 필요).
+
+## 10. HTTP 202 비동기 폴링 처리 (2026-07-13 KST)
+
+- 브랜치: `feature/T-010-async-202`
+- 라이브 probe (키·헤더 미로그): POST `image-to-3d` → **202** 본문 키 `message`, `requestId`, `requestTime`만 확인.
+  `Location`·`poll_url`·`status_url` 없음. 후보 GET 경로(`/requests/{id}` 등)는 모두 202(신규 작업 수락)만 반환해 **폴링 URL 미확인**.
+- 구현: `parse_async_job`, `poll_until_complete`, `handle_varco_response`; `request_image`가 202 수락 후 폴링.
+  환경변수: `NC_VARCO_POLL_INTERVAL`(기본 2s), `NC_VARCO_POLL_TIMEOUT`(기본 120s),
+  `NC_VARCO_POLL_URL_TEMPLATE`(poll URL 미포함 응답 시 `{job_id}`/`{base}` 치환).
+- pytest: `python -m pytest tests/test_varco_api.py -v` → **31 passed** (로그: `T-010_pytest.txt`)
+- 라이브 (`test_varco_art_live_generation`, 키는 `.env`에만 존재·로그에 미출력):
+  - `ok`: false
+  - `status_code`: 202
+  - `used_fallback`: true
+  - `reason`: async 202 without poll URL (`NC_VARCO_POLL_URL_TEMPLATE` 미설정; NC status 엔드포인트 확보 필요)
+- 결론: 202 비동기 수락·파싱·폴링 골격 완료. 라이브 PNG DoD는 **Pending** (NC poll URL 명세 또는 템플릿 확정 필요).
 
 ## 8. 재현 방법
 
