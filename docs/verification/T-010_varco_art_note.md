@@ -18,9 +18,11 @@
 스파이크 로직을 둔 방식과 동일한 배치).
 
 1. `build_generation_payload` — 프롬프트 + 100x50 크기 요청 바디 구성 (8-2).
-2. `request_image` — `requests.post`로 이미지 생성 엔드포인트 호출. 인증 토큰·엔드포인트·
-   모델은 전부 `os.environ`(`NC_VARCO_API_KEY` / `NC_VARCO_API_URL` / `NC_VARCO_MODEL`)에서
-   읽으며 코드·로그에 남기지 않는다(코딩표준 §Python).
+2. `request_image` — `requests.post`로 이미지(3D) 생성 엔드포인트 호출. 기본 URL은
+   `https://openapi.ai.nc.com/3d/varco/v1/image-to-3d`이며, `resolve_varco_endpoint`가
+   `NC_VARCO_API_URL`(전체 URL) 또는 `NC_VARCO_API_BASE`+path로 오버라이드한다.
+   인증 토큰·모델은 `os.environ`(`NC_VARCO_API_KEY` / `NC_VARCO_MODEL`)에서 읽으며
+   코드·로그에 남기지 않는다(코딩표준 §Python).
 3. `extract_image_bytes` — 응답 JSON의 base64(`data`/`b64_json`) 또는 이미지 URL(`url`/
    `image_url`/`link`), 또는 raw `image/*` 바이너리 세 경로를 모두 처리 (8-3).
 4. `save_image_bytes` — PNG 매직넘버 검증 후 디스크 저장 (10 통과 기준).
@@ -79,5 +81,6 @@
 ```
 python -m pytest tests/test_varco_api.py -v
 ```
-- 라이브 검증: `.env`에 `NC_VARCO_API_KEY`(및 필요 시 `NC_VARCO_API_URL`)를 채우면
-  `@REQUIRES_LIVE_API` 테스트가 활성화되어 실제 API를 호출한다.
+- 라이브 검증: `.env`에 `NC_VARCO_API_KEY`(및 필요 시 `NC_VARCO_API_URL` 또는
+  `NC_VARCO_API_BASE`)를 채우면 `@REQUIRES_LIVE_API` 테스트가 활성화되어
+  `https://openapi.ai.nc.com/3d/varco/v1/image-to-3d`(또는 오버라이드 URL)로 실제 API를 호출한다.
