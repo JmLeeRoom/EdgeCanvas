@@ -20,6 +20,7 @@ from src.common.idf_env import (
     IdfCommandResult,
     diagnose_idf_environment,
     parse_idf_version,
+    resolve_idf_py,
     run_idf_version,
     suggest_venv_conflict_remediation,
 )
@@ -30,6 +31,32 @@ class FakeProcessResult:
   returncode: int
   stdout: str
   stderr: str
+
+
+def test_resolve_idf_py_prefers_which_executable_on_windows():
+    """Windows: shutil.which가 반환한 idf.py.EXE 경로를 subprocess에 넘겨야 한다."""
+    exe_path = r"C:\Espressif\tools\idf-exe\1.0.3\idf.py.EXE"
+
+    def fake_which(name: str) -> str | None:
+        if name == "idf.py":
+            return exe_path
+        return None
+
+    assert resolve_idf_py(which=fake_which) == exe_path
+
+    captured: list[list[str]] = []
+
+    def tracking_runner(cmd: list[str]) -> IdfCommandResult:
+        captured.append(cmd)
+        return IdfCommandResult(
+            returncode=0,
+            stdout="ESP-IDF v5.3.5\n",
+            stderr="",
+            error=None,
+        )
+
+    run_idf_version(runner=tracking_runner, which=fake_which)
+    assert captured == [[exe_path, "--version"]]
 
 
 def test_idf_not_found_returns_clear_failure_message():
