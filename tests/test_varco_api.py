@@ -10,6 +10,7 @@ REST API 호출 규격을 신뢰성 있게 준수하는가"를 실측 검증한�
 - 라이브(@REQUIRES_LIVE_API): NC_VARCO_API_KEY가 있을 때만, 실제 VARCO Art API에
   "100x50 파란색 사각형 버튼" 프롬프트를 POST 하고 응답 이미지를 온전한 PNG로 저장한다.
 """
+import base64
 import os
 from pathlib import Path
 
@@ -23,11 +24,16 @@ from src.agent.varco_art import (  # noqa: E402
     DEFAULT_ENDPOINT,
     PNG_MAGIC,
     VARCO_IMAGE_TO_3D_PATH,
+    VarcoJobFailedError,
+    VarcoPollTimeoutError,
     build_auth_headers,
     build_generation_payload,
     extract_image_bytes,
+    handle_varco_response,
     is_valid_png,
     make_placeholder_png,
+    parse_async_job,
+    poll_until_complete,
     request_image,
     resolve_varco_endpoint,
     save_image_bytes,
@@ -293,6 +299,268 @@ def test_request_image_falls_back_on_network_error(tmp_path, monkeypatch):
 
 
 # ---------------------------------------------------------------------------
+# 202 비동기: parse_async_job / poll_until_complete / handle_varco_response
+# ---------------------------------------------------------------------------
+PROBE_202_BODY = {
+    "message": "request accepted for async processing",
+    "requestId": "eb7cdd5b2f122e570787d21af7707d4e",
+    "requestTime": "2026-07-13T21:44:20+09:00",
+}
+
+
+def _fake_202_resp(body: dict, *, location: str | None = None):
+    class FakeResp:
+        status_code = 202
+        headers = {"Content-Type": "application/json; charset=utf-8"}
+        if location:
+            headers["Location"] = location
+
+        def __init__(self, payload: dict):
+            self._payload = payload
+
+        def json(self):
+            return self._payload
+
+    return FakeResp(body)
+
+
+def test_parse_async_job_probe_fixture():
+    """라이브 probe와 동일한 202 본문에서 requestId를 추출한다."""
+    resp = _fake_202_resp(PROBE_202_BODY)
+    job = parse_async_job(resp, endpoint=DEFAULT_ENDPOINT)
+    assert job["job_id"] == PROBE_202_BODY["requestId"]
+    assert job["poll_url"] is None
+
+
+def test_parse_async_job_location_header():
+    resp = _fake_202_resp(PROBE_202_BODY, location="https://api.example.com/jobs/abc")
+    job = parse_async_job(resp)
+    assert job["poll_url"] == "https://api.example.com/jobs/abc"
+
+
+def test_parse_async_job_poll_url_in_body():
+    body = {**PROBE_202_BODY, "status_url": "https://api.example.com/status/abc"}
+    job = parse_async_job(_fake_202_resp(body))
+    assert job["poll_url"] == "https://api.example.com/status/abc"
+    assert job["job_id"] == PROBE_202_BODY["requestId"]
+
+
+def test_parse_async_job_poll_url_template_env(monkeypatch):
+    monkeypatch.setenv(
+        "NC_VARCO_POLL_URL_TEMPLATE",
+        "{base}/3d/varco/v1/requests/{job_id}",
+    )
+    job = parse_async_job(_fake_202_resp(PROBE_202_BODY), endpoint=DEFAULT_ENDPOINT)
+    assert job["poll_url"] == (
+        f"{DEFAULT_API_BASE}/3d/varco/v1/requests/{PROBE_202_BODY['requestId']}"
+    )
+
+
+def test_poll_until_complete_returns_image_on_200():
+    png = make_placeholder_png(100, 50, color=(0, 0, 255))
+    calls = {"n": 0}
+
+    def fake_get(url, headers=None, timeout=30):
+        calls["n"] += 1
+        assert url == "https://poll.example.com/job"
+
+        class R:
+            status_code = 200
+            headers = {"Content-Type": "image/png"}
+            content = png
+
+        return R()
+
+    out = poll_until_complete(
+        "https://poll.example.com/job",
+        {"OPENAPI_KEY": "x"},
+        timeout=5,
+        poll_interval=0.01,
+        get_fn=fake_get,
+    )
+    assert out.status_code == 200
+    assert calls["n"] == 1
+
+
+def test_poll_until_complete_failed_status():
+    def fake_get(url, headers=None, timeout=30):
+        class R:
+            status_code = 200
+            headers = {"Content-Type": "application/json"}
+
+            def json(self):
+                return {"status": "failed", "message": "generation error"}
+
+        return R()
+
+    with pytest.raises(VarcoJobFailedError, match="failed"):
+        poll_until_complete(
+            "https://poll.example.com/job",
+            {},
+            timeout=1,
+            poll_interval=0.01,
+            get_fn=fake_get,
+        )
+
+
+def test_poll_until_complete_timeout():
+    def fake_get(url, headers=None, timeout=30):
+        class R:
+            status_code = 202
+            headers = {"Content-Type": "application/json"}
+
+            def json(self):
+                return {"status": "processing"}
+
+        return R()
+
+    with pytest.raises(VarcoPollTimeoutError):
+        poll_until_complete(
+            "https://poll.example.com/job",
+            {},
+            timeout=0.05,
+            poll_interval=0.01,
+            get_fn=fake_get,
+        )
+
+
+def test_handle_varco_response_202_poll_sequence():
+    png = make_placeholder_png(100, 50, color=(0, 0, 255))
+    b64 = base64.b64encode(png).decode("ascii")
+    poll_calls = {"n": 0}
+
+    class Initial202:
+        status_code = 202
+        headers = {"Content-Type": "application/json"}
+
+        def json(self):
+            return {
+                "message": "accepted",
+                "requestId": "job-1",
+                "poll_url": "https://poll.example.com/job-1",
+            }
+
+    def fake_get(url, headers=None, timeout=30):
+        poll_calls["n"] += 1
+        assert url == "https://poll.example.com/job-1"
+
+        class Done:
+            status_code = 200
+            headers = {"Content-Type": "application/json"}
+
+            def json(self):
+                return {"status": "completed", "images": [{"data": b64}]}
+
+        return Done()
+
+    out = handle_varco_response(
+        Initial202(),
+        {"OPENAPI_KEY": "x"},
+        poll_interval=0.01,
+        poll_timeout=5,
+        get_fn=fake_get,
+    )
+    assert out == png
+    assert poll_calls["n"] >= 1
+
+
+def test_request_image_handles_202_async(tmp_path, monkeypatch):
+    """202 → poll → PNG 저장 전체 흐름."""
+    import src.agent.varco_art as mod
+
+    png = make_placeholder_png(100, 50, color=(0, 0, 255))
+    b64 = base64.b64encode(png).decode("ascii")
+
+    class Post202:
+        status_code = 202
+        headers = {"Content-Type": "application/json"}
+
+        def json(self):
+            return {
+                "message": "accepted",
+                "requestId": "async-job-99",
+                "poll_url": "https://poll.example.com/async-job-99",
+            }
+
+    def fake_post(url, headers=None, json=None, timeout=60):
+        return Post202()
+
+    def fake_get(url, headers=None, timeout=30):
+        class Done:
+            status_code = 200
+            headers = {"Content-Type": "application/json"}
+
+            def json(self):
+                return {"status": "success", "data": b64}
+
+        return Done()
+
+    monkeypatch.setattr(mod.requests, "post", fake_post)
+    monkeypatch.setattr(mod.requests, "get", fake_get)
+
+    dst = tmp_path / "async.png"
+    result = request_image(
+        BUTTON_PROMPT,
+        width=100,
+        height=50,
+        save_path=dst,
+        api_key="dummy",
+        endpoint=DEFAULT_ENDPOINT,
+    )
+    assert result["ok"] is True
+    assert result["status_code"] == 202
+    assert result["used_fallback"] is False
+    assert is_valid_png(dst.read_bytes())
+
+
+def test_request_image_falls_back_on_async_timeout(tmp_path, monkeypatch):
+    import src.agent.varco_art as mod
+
+    class Post202:
+        status_code = 202
+        headers = {"Content-Type": "application/json"}
+
+        def json(self):
+            return {
+                "requestId": "slow-job",
+                "poll_url": "https://poll.example.com/slow",
+            }
+
+    def fake_post(url, headers=None, json=None, timeout=60):
+        return Post202()
+
+    def fake_get(url, headers=None, timeout=30):
+        class Processing:
+            status_code = 202
+            headers = {"Content-Type": "application/json"}
+
+            def json(self):
+                return {"status": "processing"}
+
+        return Processing()
+
+    monkeypatch.setattr(mod.requests, "post", fake_post)
+    monkeypatch.setattr(mod.requests, "get", fake_get)
+    monkeypatch.setenv("NC_VARCO_POLL_TIMEOUT", "0.05")
+    monkeypatch.setenv("NC_VARCO_POLL_INTERVAL", "0.01")
+
+    dst = tmp_path / "timeout_fallback.png"
+    result = request_image(
+        BUTTON_PROMPT,
+        width=100,
+        height=50,
+        save_path=dst,
+        api_key="dummy",
+        endpoint=DEFAULT_ENDPOINT,
+    )
+    assert result["ok"] is False
+    assert result["used_fallback"] is True
+    assert result["status_code"] == 202
+    assert "timeout" in (result["reason"] or "").lower()
+    assert is_valid_png(dst.read_bytes())
+
+
+# ---------------------------------------------------------------------------
 # 라이브 실험 — 카드 10항: 실제 VARCO Art API 호출 및 PNG 저장
 # ---------------------------------------------------------------------------
 @REQUIRES_LIVE_API
@@ -311,4 +579,4 @@ def test_varco_art_live_generation():
     assert dst.exists()
     assert is_valid_png(dst.read_bytes())
     if result["ok"]:
-        assert result["status_code"] in (200, 201)
+        assert result["status_code"] in (200, 201, 202)

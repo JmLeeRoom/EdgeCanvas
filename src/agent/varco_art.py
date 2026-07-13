@@ -16,12 +16,17 @@
 - NC_VARCO_API_URL     : 전체 엔드포인트 URL 오버라이드 (최우선)
 - NC_VARCO_API_BASE    : 베이스 URL만 오버라이드 (``NC_VARCO_API_URL`` 미설정 시 path와 조합)
 - NC_VARCO_MODEL       : 사용 모델 식별자(선택)
+- NC_VARCO_POLL_INTERVAL : 202 비동기 폴링 간격 초 (기본 2)
+- NC_VARCO_POLL_TIMEOUT  : 202 비동기 폴링 최대 대기 초 (기본 120)
+- NC_VARCO_POLL_URL_TEMPLATE : 폴링 URL 템플릿. ``{job_id}`` ``{request_id}``
+  ``{endpoint}`` ``{base}`` 치환. 응답 본문/Location에 poll URL이 없을 때만 사용.
 """
 from __future__ import annotations
 
 import base64
 import os
 import struct
+import time
 import zlib
 from pathlib import Path
 
@@ -38,6 +43,41 @@ DEFAULT_ENDPOINT = f"{DEFAULT_API_BASE}{VARCO_IMAGE_TO_3D_PATH}"
 
 # NC OpenAPI (openapi.ai.nc.com) 기본 인증 헤더. Bearer는 레거시/테스트용 오버라이드만.
 DEFAULT_AUTH_HEADER = "OPENAPI_KEY"
+
+# 비동기 작업 완료/실패로 간주하는 status 문자열 (소문자 비교).
+_ASYNC_COMPLETED_STATUSES = frozenset({"completed", "success", "done", "succeeded"})
+_ASYNC_FAILED_STATUSES = frozenset({"failed", "error", "cancelled", "canceled"})
+
+
+class VarcoJobFailedError(RuntimeError):
+    """비동기 VARCO 작업이 failed/error 등 종료 상태로 끝났을 때."""
+
+    def __init__(self, status: str, *, detail: str | None = None) -> None:
+        self.status = status
+        self.detail = detail
+        msg = f"VARCO async job {status!r}"
+        if detail:
+            msg = f"{msg}: {detail}"
+        super().__init__(msg)
+
+
+class VarcoPollTimeoutError(TimeoutError):
+    """비동기 VARCO 작업 폴링이 제한 시간 내에 완료되지 않았을 때."""
+
+    def __init__(self, poll_url: str, timeout: float) -> None:
+        self.poll_url = poll_url
+        self.timeout = timeout
+        super().__init__(f"VARCO async poll timed out after {timeout}s")
+
+
+def default_poll_interval() -> float:
+    """환경변수 ``NC_VARCO_POLL_INTERVAL`` (기본 2초)."""
+    return float(os.getenv("NC_VARCO_POLL_INTERVAL", "2"))
+
+
+def default_poll_timeout() -> float:
+    """환경변수 ``NC_VARCO_POLL_TIMEOUT`` (기본 120초)."""
+    return float(os.getenv("NC_VARCO_POLL_TIMEOUT", "120"))
 
 
 def build_auth_headers(
@@ -169,6 +209,194 @@ def extract_image_bytes(resp) -> bytes:
     raise ValueError("응답에서 이미지 데이터를 찾을 수 없습니다.")
 
 
+def _job_status_from_body(body: object) -> str | None:
+    """JSON 본문에서 비동기 작업 상태 문자열을 추출한다."""
+    if not isinstance(body, dict):
+        return None
+    for key in ("status", "state", "job_status", "task_status"):
+        value = body.get(key)
+        if value is not None:
+            return str(value).lower()
+    return None
+
+
+def _response_has_extractable_image(resp) -> bool:
+    """응답에서 PNG 이미지 바이트를 즉시 추출할 수 있는지 검사한다."""
+    content_type = (resp.headers or {}).get("Content-Type", "")
+    if content_type.startswith("image/"):
+        return is_valid_png(resp.content)
+    if resp.status_code not in (200, 201):
+        return False
+    try:
+        data = extract_image_bytes(resp)
+    except (ValueError, requests.exceptions.RequestException):
+        return False
+    return is_valid_png(data)
+
+
+def _poll_url_from_template(
+    job_id: str,
+    *,
+    endpoint: str | None = None,
+    api_base: str | None = None,
+) -> str | None:
+    """``NC_VARCO_POLL_URL_TEMPLATE`` 환경변수로 폴링 URL을 구성한다."""
+    template = os.getenv("NC_VARCO_POLL_URL_TEMPLATE", "").strip()
+    if not template:
+        return None
+    base = (api_base or os.getenv("NC_VARCO_API_BASE") or DEFAULT_API_BASE).rstrip("/")
+    ep = (endpoint or resolve_varco_endpoint()).rstrip("/")
+    return template.format(
+        job_id=job_id,
+        request_id=job_id,
+        endpoint=ep,
+        base=base,
+    )
+
+
+def parse_async_job(
+    resp,
+    *,
+    endpoint: str | None = None,
+    api_base: str | None = None,
+) -> dict[str, str | None]:
+    """202 Accepted 응답에서 job id와 폴링 URL을 추출한다.
+
+    우선순위:
+    1. ``Location`` 헤더
+    2. JSON 본문 ``poll_url`` / ``status_url`` / ``result_url`` / ``url``
+    3. JSON 본문 ``requestId`` / ``job_id`` / ``task_id`` / ``id`` + ``NC_VARCO_POLL_URL_TEMPLATE``
+
+    라이브 probe(2026-07-13): 본문 키는 ``message``, ``requestId``, ``requestTime`` 뿐이며
+    poll URL은 응답에 포함되지 않는다. 템플릿 미설정 시 ``poll_url``은 ``None``이다.
+    """
+    headers = resp.headers or {}
+    poll_url = headers.get("Location") or headers.get("location")
+
+    body: dict | None = None
+    content_type = headers.get("Content-Type", "")
+    if "json" in content_type:
+        try:
+            parsed = resp.json()
+            if isinstance(parsed, dict):
+                body = parsed
+        except ValueError:
+            body = None
+
+    if body and not poll_url:
+        for key in ("poll_url", "status_url", "result_url", "url"):
+            value = body.get(key)
+            if isinstance(value, str) and value.strip():
+                poll_url = value.strip()
+                break
+
+    job_id: str | None = None
+    if body:
+        for key in ("requestId", "request_id", "job_id", "task_id", "id"):
+            value = body.get(key)
+            if value is not None and str(value).strip():
+                job_id = str(value).strip()
+                break
+
+    if not poll_url and job_id:
+        poll_url = _poll_url_from_template(
+            job_id, endpoint=endpoint, api_base=api_base
+        )
+
+    return {"job_id": job_id, "poll_url": poll_url}
+
+
+def poll_until_complete(
+    poll_url: str,
+    headers: dict[str, str],
+    timeout: float,
+    poll_interval: float,
+    *,
+    get_fn=None,
+) -> requests.Response:
+    """폴링 URL을 주기적으로 조회해 이미지 또는 완료 상태가 될 때까지 대기한다.
+
+    - 200/201 + image/* 또는 추출 가능한 PNG → 완료
+    - JSON ``status``/``state`` 가 completed/success/done → 완료(이미지 추출은 호출자)
+    - failed/error → ``VarcoJobFailedError``
+    - ``timeout`` 초과 → ``VarcoPollTimeoutError``
+    """
+    if get_fn is None:
+        get_fn = requests.get
+    deadline = time.monotonic() + timeout
+    last_status: str | None = None
+
+    while time.monotonic() < deadline:
+        resp = get_fn(poll_url, headers=headers, timeout=30)
+
+        if resp.status_code in (200, 201) and _response_has_extractable_image(resp):
+            return resp
+
+        if resp.status_code in (200, 201, 202):
+            try:
+                body = resp.json()
+            except ValueError:
+                body = None
+            if isinstance(body, dict):
+                status = _job_status_from_body(body)
+                if status:
+                    last_status = status
+                    if status in _ASYNC_COMPLETED_STATUSES:
+                        if _response_has_extractable_image(resp):
+                            return resp
+                        return resp
+                    if status in _ASYNC_FAILED_STATUSES:
+                        detail = body.get("message") or body.get("error") or body.get("reason")
+                        raise VarcoJobFailedError(status, detail=str(detail) if detail else None)
+
+        time.sleep(poll_interval)
+
+    raise VarcoPollTimeoutError(poll_url, timeout)
+
+
+def handle_varco_response(
+    resp,
+    headers: dict[str, str],
+    *,
+    poll_interval: float | None = None,
+    poll_timeout: float | None = None,
+    get_fn=None,
+    endpoint: str | None = None,
+    api_base: str | None = None,
+) -> bytes:
+    """VARCO API 응답을 처리해 PNG 이미지 바이트를 반환한다.
+
+  - 200/201: 즉시 ``extract_image_bytes``
+  - 202: ``parse_async_job`` → ``poll_until_complete`` → ``extract_image_bytes``
+    """
+    if get_fn is None:
+        get_fn = requests.get
+    if resp.status_code in (200, 201):
+        return extract_image_bytes(resp)
+
+    if resp.status_code == 202:
+        job = parse_async_job(resp, endpoint=endpoint, api_base=api_base)
+        poll_url = job.get("poll_url")
+        if not poll_url:
+            job_id = job.get("job_id") or "unknown"
+            raise ValueError(
+                f"async 202 without poll URL (job_id={job_id}); "
+                "set NC_VARCO_POLL_URL_TEMPLATE if NC provides a status endpoint"
+            )
+        interval = default_poll_interval() if poll_interval is None else poll_interval
+        timeout = default_poll_timeout() if poll_timeout is None else poll_timeout
+        final = poll_until_complete(
+            poll_url,
+            headers,
+            timeout,
+            interval,
+            get_fn=get_fn,
+        )
+        return extract_image_bytes(final)
+
+    raise ValueError(f"unexpected HTTP {resp.status_code}")
+
+
 def save_image_bytes(data: bytes, path: str | Path) -> Path:
     """이미지 바이트를 PNG로 디스크에 저장한다(카드 10 통과 기준).
 
@@ -225,17 +453,41 @@ def request_image(
     except requests.exceptions.RequestException as exc:
         return _fallback(dst, width, height, reason=f"네트워크 에러: {type(exc).__name__}")
 
-    if resp.status_code not in (200, 201):
+    if resp.status_code not in (200, 201, 202):
         return _fallback(
             dst, width, height, reason=f"HTTP {resp.status_code}", status_code=resp.status_code
         )
 
+    auth_headers = {
+        **build_auth_headers(api_key),
+        "Content-Type": "application/json",
+    }
     try:
-        image_bytes = extract_image_bytes(resp)
+        image_bytes = handle_varco_response(
+            resp,
+            auth_headers,
+            endpoint=endpoint,
+        )
         save_image_bytes(image_bytes, dst)
+    except VarcoPollTimeoutError as exc:
+        return _fallback(
+            dst,
+            width,
+            height,
+            reason=f"async poll timeout ({exc.timeout}s)",
+            status_code=resp.status_code,
+        )
+    except VarcoJobFailedError as exc:
+        return _fallback(
+            dst,
+            width,
+            height,
+            reason=f"async job failed: {exc.status}",
+            status_code=resp.status_code,
+        )
     except (ValueError, requests.exceptions.RequestException) as exc:
         return _fallback(
-            dst, width, height, reason=f"응답 처리 실패: {type(exc).__name__}",
+            dst, width, height, reason=f"응답 처리 실패: {exc}",
             status_code=resp.status_code,
         )
 
