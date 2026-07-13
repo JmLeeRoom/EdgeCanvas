@@ -23,6 +23,7 @@ from src.agent.varco_art import (  # noqa: E402
     DEFAULT_ENDPOINT,
     PNG_MAGIC,
     VARCO_IMAGE_TO_3D_PATH,
+    build_auth_headers,
     build_generation_payload,
     extract_image_bytes,
     is_valid_png,
@@ -81,6 +82,66 @@ def test_resolve_varco_endpoint_url_arg_overrides_env(monkeypatch):
     """url 인자가 환경변수보다 우선한다."""
     monkeypatch.setenv("NC_VARCO_API_URL", "https://env.example.com/api")
     assert resolve_varco_endpoint(url="https://arg.example.com/api") == "https://arg.example.com/api"
+
+
+# ---------------------------------------------------------------------------
+# 오프라인 로직: NC OpenAPI 인증 헤더 (OPENAPI_KEY)
+# ---------------------------------------------------------------------------
+def test_build_auth_headers_uses_openapi_key_by_default():
+    """NC OpenAPI 기본 인증은 OPENAPI_KEY 헤더를 사용한다."""
+    headers = build_auth_headers("test-token-xyz")
+    assert headers == {"OPENAPI_KEY": "test-token-xyz"}
+    assert "Authorization" not in headers
+
+
+def test_build_auth_headers_respects_env_override(monkeypatch):
+    """NC_VARCO_AUTH_HEADER로 헤더 이름을 오버라이드할 수 있다."""
+    monkeypatch.setenv("NC_VARCO_AUTH_HEADER", "X-Custom-Key")
+    headers = build_auth_headers("secret")
+    assert headers == {"X-Custom-Key": "secret"}
+
+
+def test_build_auth_headers_authorization_uses_bearer():
+    """Authorization 헤더 지정 시 Bearer 스킴을 붙인다(레거시/테스트용)."""
+    headers = build_auth_headers("secret", auth_header="Authorization")
+    assert headers == {"Authorization": "Bearer secret"}
+
+
+def test_request_image_sends_openapi_key_header(tmp_path, monkeypatch):
+    """request_image는 requests.post에 OPENAPI_KEY 인증 헤더를 전달한다."""
+    import src.agent.varco_art as mod
+
+    png = make_placeholder_png(100, 50, color=(0, 0, 255))
+    captured: dict = {}
+
+    class FakeResp:
+        status_code = 200
+        headers = {"Content-Type": "image/png"}
+        content = png
+
+    def fake_post(url, headers=None, json=None, timeout=60):
+        captured["url"] = url
+        captured["headers"] = headers
+        captured["json"] = json
+        return FakeResp()
+
+    monkeypatch.setattr(mod.requests, "post", fake_post)
+    monkeypatch.delenv("NC_VARCO_AUTH_HEADER", raising=False)
+
+    dst = tmp_path / "out.png"
+    result = request_image(
+        BUTTON_PROMPT,
+        width=100,
+        height=50,
+        save_path=dst,
+        api_key="live-key-not-logged",
+        endpoint="https://openapi.ai.nc.com/3d/varco/v1/image-to-3d",
+    )
+
+    assert result["ok"] is True
+    assert captured["headers"]["OPENAPI_KEY"] == "live-key-not-logged"
+    assert "Authorization" not in captured["headers"]
+    assert captured["headers"]["Content-Type"] == "application/json"
 
 
 # ---------------------------------------------------------------------------

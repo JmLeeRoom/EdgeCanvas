@@ -11,10 +11,11 @@
 기각하고, 단순 색상 채우기 placeholder PNG를 로컬에서 생성해 파이프라인을 잇는다.
 
 설정은 모두 환경변수로 읽는다(코딩표준: 키/엔드포인트를 코드·로그에 남기지 않는다):
-- NC_VARCO_API_KEY  : 인증 토큰 (없으면 라이브 호출 스킵 → fallback)
-- NC_VARCO_API_URL  : 전체 엔드포인트 URL 오버라이드 (최우선)
-- NC_VARCO_API_BASE : 베이스 URL만 오버라이드 (``NC_VARCO_API_URL`` 미설정 시 path와 조합)
-- NC_VARCO_MODEL    : 사용 모델 식별자(선택)
+- NC_VARCO_API_KEY     : 인증 토큰 (없으면 라이브 호출 스킵 → fallback)
+- NC_VARCO_AUTH_HEADER : 인증 헤더 이름 (기본 ``OPENAPI_KEY``; NC OpenAPI 규격)
+- NC_VARCO_API_URL     : 전체 엔드포인트 URL 오버라이드 (최우선)
+- NC_VARCO_API_BASE    : 베이스 URL만 오버라이드 (``NC_VARCO_API_URL`` 미설정 시 path와 조합)
+- NC_VARCO_MODEL       : 사용 모델 식별자(선택)
 """
 from __future__ import annotations
 
@@ -34,6 +35,25 @@ PNG_MAGIC = b"\x89PNG\r\n\x1a\n"
 DEFAULT_API_BASE = "https://openapi.ai.nc.com"
 VARCO_IMAGE_TO_3D_PATH = "/3d/varco/v1/image-to-3d"
 DEFAULT_ENDPOINT = f"{DEFAULT_API_BASE}{VARCO_IMAGE_TO_3D_PATH}"
+
+# NC OpenAPI (openapi.ai.nc.com) 기본 인증 헤더. Bearer는 레거시/테스트용 오버라이드만.
+DEFAULT_AUTH_HEADER = "OPENAPI_KEY"
+
+
+def build_auth_headers(
+    api_key: str,
+    *,
+    auth_header: str | None = None,
+) -> dict[str, str]:
+    """NC OpenAPI 인증 헤더를 구성한다.
+
+    기본은 ``OPENAPI_KEY: <token>`` (openapi.ai.nc.com). ``NC_VARCO_AUTH_HEADER``로
+    헤더 이름을 오버라이드할 수 있다. ``Authorization``을 지정하면 Bearer 스킴을 붙인다.
+    """
+    header_name = (auth_header or os.getenv("NC_VARCO_AUTH_HEADER") or DEFAULT_AUTH_HEADER).strip()
+    if header_name.lower() == "authorization":
+        return {"Authorization": f"Bearer {api_key}"}
+    return {header_name: api_key}
 
 
 def resolve_varco_endpoint(
@@ -194,7 +214,7 @@ def request_image(
         resp = requests.post(
             endpoint,
             headers={
-                "Authorization": f"Bearer {api_key}",
+                **build_auth_headers(api_key),
                 "Content-Type": "application/json",
             },
             json=build_generation_payload(
