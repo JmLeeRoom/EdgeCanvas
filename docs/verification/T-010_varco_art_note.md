@@ -35,7 +35,7 @@
   API 키 없이 항상 실행·통과한다.
 - 라이브 테스트(`@REQUIRES_LIVE_API`, `NC_VARCO_API_KEY` 키드)는 키가 있을 때만 실제
   VARCO Art API를 호출해 온전한 PNG 저장을 검증한다.
-- 실행 결과: **11 passed, 1 skipped** (skip 사유: NC_VARCO_API_KEY 미설정).
+- 실행 결과 (2026-07-13): **17 passed** (NC_VARCO_API_KEY 설정 시 라이브 포함; 당회 401→fallback).
 
 ## 4. 접속 상태 및 결론 — Go/No-Go
 
@@ -75,6 +75,18 @@
 - `docs/verification/T-010_varco_art.png` — 카드 13 검증 이미지. 라이브 키 부재로 **fallback
   placeholder PNG**(100x50 파란색)를 저장했다. 키 확보 후 재실행 시 라이브 생성 이미지로 대체.
 - `docs/verification/T-010_pytest.txt` — pytest 실행 로그.
+
+## 8. 엔드포인트 마이그레이션 후속 (2026-07-13 KST)
+
+- 브랜치: `feature/T-010-varco-endpoint` (커밋 `2c5b2ff`)
+- 기본/권장 URL: `https://openapi.ai.nc.com/3d/varco/v1/image-to-3d` (`NC_VARCO_API_URL`로 오버라이드 가능)
+- pytest: `python -m pytest tests/test_varco_api.py -v` → **17 passed** (로그: `T-010_pytest.txt`)
+- 라이브 (`test_varco_art_live_generation`, 키는 `.env`에만 존재·로그에 미출력):
+  - `ok`: false
+  - `status_code`: 401
+  - `used_fallback`: true
+  - `reason`: HTTP 401 (엔드포인트 도달 가능, 인증/권한 미해결)
+- 결론: 엔드포인트 코드 변경은 PR로 반영; 라이브 200/201 DoD는 **Pending** (NC 측 키/권한 확인 필요).
 
 ## 8. 재현 방법
 
