@@ -1,0 +1,2 @@
+# T-004: ESP32-P4 타깃 기본값 (sdkconfig는 생성물 — 커밋하지 않음)
+CONFIG_IDF_TARGET="esp32p4"
