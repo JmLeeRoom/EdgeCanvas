@@ -1,0 +1,54 @@
+T-004 verification log — ESP32-P4 BSP 빌드/플래시
+Timestamp: 2026-07-13T18:15:00+09:00
+Branch: feature/T-004-p4-bsp-flash
+Commit: 2f7e070
+Project: hw/esp32p4-bsp-demo
+
+=== Pre-checks ===
+T-003 merged on main: YES (a2b9364, 6346a9f)
+WIP status:in-progress: none (local branch only; not pushed)
+ESP-IDF: v5.3 (export_idf_env.ps1 → C:\Espressif\frameworks\esp-idf-v5.3)
+Task doc: Task34.md (T-004) — Task4.md is T-008 (different task)
+
+=== Build (real hardware toolchain) ===
+Commands:
+  . .\scripts\export_idf_env.ps1
+  cd hw\esp32p4-bsp-demo
+  idf.py set-target esp32p4
+  idf.py build
+
+Result: PASS
+Parser (parse_build_log): True
+
+Build log excerpt:
+  App "esp32p4-bsp-demo" version: 2f7e070-dirty
+  ...
+  Project build complete. To flash, run:
+   idf.py flash
+  or
+   idf.py -p PORT flash
+
+Artifacts (not committed; .gitignore):
+  hw/esp32p4-bsp-demo/build/esp32p4-bsp-demo.bin
+  hw/esp32p4-bsp-demo/sdkconfig (generated)
+
+=== Flash (real board) ===
+COM port scan (Win32_SerialPort): none detected
+Flash attempted: NO — board not connected / COM port unavailable
+
+Expected flash command (when board connected):
+  idf.py -C hw/esp32p4-bsp-demo -p COM_PORT flash
+
+Parser fixture (parse_flash_log): PASS in unit tests (esptool progress + Hash verified)
+LCD text/image output on Waveshare board: NOT VERIFIED (requires physical flash + esp-bsp LCD example)
+
+Remediation if COM missing (card 12):
+  장치 관리자에서 CP210x 또는 CH34x USB-UART 드라이버 설치 확인, USB 케이블 교체.
+
+=== Unit tests ===
+Command: python -m pytest tests/test_p4_bsp_flash_plan.py -v
+Result: 8 passed
+
+=== esp-bsp full LCD example ===
+Not cloned in this pass; README documents esp-bsp clone path for Waveshare LCD BSP example.
+This scaffold validates esp32p4 target compile pipeline; LCD/BSP integration deferred to board + esp-bsp checkout.
