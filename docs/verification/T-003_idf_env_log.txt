@@ -1,65 +1,161 @@
-T-003 검증 기록 — ESP-IDF v5.3+ 개발 환경 구축
-생성 시각: 2026-07-13T15:10:00+09:00
-브랜치: feature/T-003-idf-env
+﻿T-003 verification log - ESP-IDF v5.3+ real environment
+Timestamp: 2026-07-13T15:56:58+09:00
 
-## 선행 Task (T-703) 상태
-- main 브랜치에 T-703 관련 머지 커밋 없음 (착수전).
-- 워크플로 규칙상 선행 위반. 본 Pass 1은 사용자 명시 요청에 따라 repo-side 산출물만 구현.
+Install method:
+- git clone -b v5.3.5 --recursive --depth 1 to C:\Espressif\frameworks\esp-idf-v5.3
+- install.bat esp32,esp32c3,esp32p4
+- (Offline installer esp-idf-tools-setup-offline-5.3.5.exe not used; no documented silent flags)
 
-## 실환경 ESP-IDF 검사
+Path exists: True
 
-### 설치 경로 존재 여부
-C:\Espressif\frameworks\esp-idf-v5.3 : False (미설치)
+=== export_idf_env.ps1 + idf.py --version ===
+[T-003] export.ps1 ?뚯떛: C:\Espressif\frameworks\esp-idf-v5.3\export.ps1
+Setting IDF_PATH: C:\Espressif\frameworks\esp-idf-v5.3
+Checking Python compatibility
+Adding ESP-IDF tools to PATH...
 
-### idf.py --version (실제 터미널)
-```
-idf.py NOT FOUND on PATH
-```
+Name                           Value                                                                                   
+----                           -----                                                                                   
+IDF_DEACTIVATE_FILE_PATH       C:\Users\togod\AppData\Local\Temp\tmp4wlouikqidf_42440                                  
+No directories added to PATH:
+C:\Users\togod\.espressif\tools\xtensa-esp-elf-gdb\16.3_20250913\xtensa-esp-elf-gdb\bin
+C:\Users\togod\.espressif\tools\riscv32-esp-elf-gdb\16.3_20250913\riscv32-esp-elf-gdb\bin
+C:\Users\togod\.espressif\tools\xtensa-esp-elf\esp-13.2.0_20250707\xtensa-esp-elf\bin
+C:\Users\togod\.espressif\tools\riscv32-esp-elf\esp-13.2.0_20250707\riscv32-esp-elf\bin
+C:\Users\togod\.espressif\tools\esp32ulp-elf\2.38_20240113\esp32ulp-elf\bin
+C:\Users\togod\.espressif\tools\cmake\3.30.2\bin
+C:\Users\togod\.espressif\tools\openocd-esp32\v0.12.0-esp32-20251215\openocd-esp32\bin
+C:\Users\togod\.espressif\tools\ninja\1.12.1\
+C:\Users\togod\.espressif\tools\idf-exe\1.0.3\
+C:\Users\togod\.espressif\tools\ccache\4.12.1\ccache-4.12.1-windows-x86_64
+C:\Users\togod\.espressif\python_env\idf5.3_py3.14_env\Scripts
+C:\Espressif\frameworks\esp-idf-v5.3\tools
+c:\Users\togod\AppData\Local\Programs\cursor\resources\app\node_modules\@vscode\ripgrep\bin
+C:\Windows\system32
+C:\Windows
+C:\Windows\System32\Wbem
+C:\Windows\System32\WindowsPowerShell\v1.0\
+C:\Windows\System32\OpenSSH\
+C:\Program Files (x86)\NVIDIA Corporation\PhysX\Common
+C:\Program Files\dotnet\
+C:\Program Files\Git\cmd
+C:\Program Files (x86)\Windows Kits\10\Windows Performance Toolkit\
+C:\Program Files\nodejs\
+C:\Program Files (x86)\cloudflared\
+C:\Program Files\GitHub CLI\
+C:\Users\togod\AppData\Local\Microsoft\WindowsApps
+C:\Users\togod\AppData\Local\Programs\cursor\resources\app\bin
+C:\Users\togod\AppData\Local\Programs\Antigravity\bin
+C:\Users\togod\.dotnet\tools
+C:\Users\togod\AppData\Local\Python\bin
+C:\Users\togod\AppData\Local\Programs\Microsoft VS Code\bin
+C:\Users\togod\AppData\Roaming\npm
+C:\Users\togod\AppData\Local\Programs\Antigravity IDE\bin
+C:\Users\togod\AppData\Local\Microsoft\WinGet\Packages\Anthropic.ClaudeCode_Microsoft.Winget.Source_8wekyb3d8bbwe
+Checking if Python packages are up to date...
+Python requirements are satisfied.
+Constraint file: C:\Users\togod\.espressif\espidf.constraints.v5.3.txt
+Requirement files:
+ - C:\Espressif\frameworks\esp-idf-v5.3\tools\requirements\requirements.core.txt
+Python being checked: C:\Users\togod\.espressif\python_env\idf5.3_py3.14_env\Scripts\python.exe
 
-### 크로스 컴파일러 PATH
-```
-xtensa-esp32-elf-gcc : NOT FOUND
-riscv32-esp-elf-gcc  : NOT FOUND
-```
+Done! You can now compile ESP-IDF projects.
+Go to the project directory and run:
+    idf.py build
 
-### diagnose_idf_environment() (실환경, 보드 불필요)
-```
-status: FAIL
-message: idf.py를 찾을 수 없습니다. ESP-IDF 설치 후 `scripts/export_idf_env.ps1` 을 실행하거나 `C:\Espressif\frameworks\esp-idf-v5.3` 의 export.ps1/export.bat을 소싱하세요.
-xtensa_gcc_found: False
-riscv_gcc_found: False
-```
 
-> 본 개발 머신에는 ESP-IDF v5.3이 아직 설치되지 않았습니다.
-> 설치 후 `docs/setup/esp-idf-windows.md` 절차와 `scripts/export_idf_env.ps1` 로 재검증하세요.
+[T-003] idf.py: 
+[T-003] IDF_PATH: C:\Espressif\frameworks\esp-idf-v5.3
+[T-003] xtensa / riscv 而댄뙆?쇰윭 ?뺤씤:
+  xtensa-esp32-elf-gcc : C:\Users\togod\.espressif\tools\xtensa-esp-elf\esp-13.2.0_20250707\xtensa-esp-elf\bin\xtensa-esp32-elf-gcc.exe
+  riscv32-esp-elf-gcc  : C:\Users\togod\.espressif\tools\riscv32-esp-elf\esp-13.2.0_20250707\riscv32-esp-elf\bin\riscv32-esp-elf-gcc.exe
+ESP-IDF v5.3.5
 
-## pytest tests/test_idf_env.py -v
-```
-============================= test session starts =============================
-platform win32 -- Python 3.13.14, pytest-9.1.1, pluggy-1.6.0
-rootdir: D:\EdgeCanvas
-collected 8 items
 
-tests/test_idf_env.py::test_idf_not_found_returns_clear_failure_message PASSED
-tests/test_idf_env.py::test_parse_idf_version_accepts_v5_3_plus PASSED
-tests/test_idf_env.py::test_parse_idf_version_rejects_below_minimum PASSED
-tests/test_idf_env.py::test_diagnose_passes_with_fixture_idf_and_compilers_in_path PASSED
-tests/test_idf_env.py::test_diagnose_fails_when_cross_compilers_missing_from_path PASSED
-tests/test_idf_env.py::test_python_venv_conflict_suggests_install_bat_rerun PASSED
-tests/test_idf_env.py::test_export_script_references_default_idf_root PASSED
-tests/test_idf_env.py::test_setup_manual_documents_install_path_and_verification PASSED
 
-============================== 8 passed in 0.10s ==============================
-```
+=== cmd export.bat verification ===
+=== idf.py --version === 
+ESP-IDF v5.3.5
+=== xtensa === 
+xtensa-esp-elf-gcc.exe (crosstool-NG esp-13.2.0_20250707) 13.2.0
+Copyright (C) 2023 Free Software Foundation, Inc.
+This is free software; see the source for copying conditions.  There is NO
+warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
-## 산출물
-- docs/setup/esp-idf-windows.md (셋업 매뉴얼)
-- scripts/export_idf_env.ps1 (환경변수보내기)
-- src/common/idf_env.py (환경 진단 로직)
-- tests/test_idf_env.py (subprocess seam 단위 테스트)
+=== riscv === 
+riscv32-esp-elf-gcc (crosstool-NG esp-13.2.0_20250707) 13.2.0
+Copyright (C) 2023 Free Software Foundation, Inc.
+This is free software; see the source for copying conditions.  There is NO
+warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
 
-## DoD (실환경 기준 — ESP-IDF 미설치로 현재 미충족)
-- [ ] idf.py 호출 가능 — FAIL (미설치)
-- [ ] Xtensa/RISC-V 크로스 컴파일러 PATH 연동 — FAIL (미설치)
+=== pytest === 
+........                                                                 [100%]
+8 passed in 0.16s
 
-자동 테스트(fixture) 기준 환경 진단 PASS/FAIL 로직은 8/8 통과.
+=== diagnose_idf_environment() ===
+cmd : Traceback (most recent call last):
+위치 D:\EdgeCanvas\scripts\_write_t003_log.ps1:6 문자:14
++ ... diagBlock = cmd /c "call C:\Espressif\frameworks\esp-idf-v5.3\export. ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (Traceback (most recent call last)::String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  File "<string>", line 1, in <module>
+    from src.common.idf_env import diagnose_idf_environment; print(diagnose_idf_environment())
+                                                                   ~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "D:\EdgeCanvas\src\common\idf_env.py", line 138, in diagnose_idf_environment
+    cmd_result = run_idf_version(runner=runner)
+  File "D:\EdgeCanvas\src\common\idf_env.py", line 114, in run_idf_version
+    return execute([idf_py, "--version"])
+  File "D:\EdgeCanvas\src\common\idf_env.py", line 75, in default_runner
+    completed = subprocess.run(
+        cmd,
+    ...<2 lines>...
+        timeout=60,
+    )
+  File "C:\Users\togod\AppData\Local\Python\pythoncore-3.13-64\Lib\subprocess.py", line 554, in run
+    with Popen(*popenargs, **kwargs) as process:
+         ~~~~~^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\togod\AppData\Local\Python\pythoncore-3.13-64\Lib\subprocess.py", line 1039, in __init__
+    self._execute_child(args, executable, preexec_fn, close_fds,
+    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                        pass_fds, cwd, env,
+                        ^^^^^^^^^^^^^^^^^^^
+    ...<5 lines>...
+                        gid, gids, uid, umask,
+                        ^^^^^^^^^^^^^^^^^^^^^^
+                        start_new_session, process_group)
+                        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\togod\AppData\Local\Python\pythoncore-3.13-64\Lib\subprocess.py", line 1554, in _execute_child
+    hp, ht, pid, tid = _winapi.CreateProcess(executable, args,
+                       ~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^
+                             # no special security
+                             ^^^^^^^^^^^^^^^^^^^^^
+    ...<4 lines>...
+                             cwd,
+                             ^^^^
+                             startupinfo)
+                             ^^^^^^^^^^^^
+OSError: [WinError 193] %1은(는) 올바른 Win32 응용 프로그램이 아닙니다
+
+Note: WinError 193 when subprocess invokes bare idf.py; idf.py.EXE via shutil.which works.
+
+DoD real env:
+- ESP-IDF at C:\Espressif\frameworks\esp-idf-v5.3: PASS (v5.3.5)
+- idf.py --version after export: PASS
+- xtensa/riscv gcc on PATH: PASS
+- diagnose_idf_environment(): FAIL (Windows subprocess idf.py)
+- pytest test_idf_env.py: PASS (8/8)
+
+=== Follow-up: Windows idf.py resolution fix (2026-07-13T16:05:00+09:00) ===
+- src/common/idf_env.py: resolve_idf_py() via shutil.which before subprocess
+- pytest tests/test_idf_env.py -q: 9 passed
+- diagnose_idf_environment() after export_idf_env.ps1: PASS
+  status=PASS, idf_version=(5, 3, 5), xtensa_gcc_found=True, riscv_gcc_found=True
+
+DoD real env (final):
+- idf.py callable after export: PASS
+- Xtensa + RISC-V compilers on PATH: PASS
+- diagnose_idf_environment(): PASS
+- pytest: 9 passed
+

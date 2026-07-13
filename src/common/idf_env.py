@@ -69,6 +69,19 @@ def suggest_venv_conflict_remediation(stderr: str, idf_root: Path = DEFAULT_IDF_
     )
 
 
+def resolve_idf_py(idf_py: str = "idf.py", which: WhichFn | None = None) -> str:
+    """PATH에서 idf.py 실행 파일을 찾는다.
+
+    Windows에서는 `tools/idf.py` 스크립트보다 `idf.py.EXE` 래퍼가 우선되어야 한다.
+  `shutil.which`가 반환하는 경로를 subprocess에 넘긴다.
+    """
+    if idf_py != "idf.py":
+        return idf_py
+    lookup = which or shutil.which
+    resolved = lookup(idf_py)
+    return resolved or idf_py
+
+
 def default_runner(cmd: list[str]) -> IdfCommandResult:
     """실제 subprocess로 idf.py를 호출하는 기본 runner(seam 기본 구현)."""
     try:
@@ -77,6 +90,21 @@ def default_runner(cmd: list[str]) -> IdfCommandResult:
             capture_output=True,
             text=True,
             timeout=60,
+        )
+    except OSError as exc:
+        # Windows: bare `idf.py`가 Python 스크립트로 해석되면 WinError 193 발생 가능.
+        if len(cmd) >= 1 and cmd[0] == "idf.py":
+            resolved = resolve_idf_py()
+            if resolved != cmd[0]:
+                return default_runner([resolved, *cmd[1:]])
+        return IdfCommandResult(
+            returncode=127,
+            stdout="",
+            stderr="",
+            error=(
+                f"idf.py 실행에 실패했습니다 ({exc}). "
+                "ESP-IDF 설치 후 `scripts/export_idf_env.ps1` 을 실행하세요."
+            ),
         )
     except FileNotFoundError:
         return IdfCommandResult(
@@ -108,10 +136,12 @@ def default_runner(cmd: list[str]) -> IdfCommandResult:
 def run_idf_version(
     idf_py: str = "idf.py",
     runner: Runner | None = None,
+    which: WhichFn | None = None,
 ) -> IdfCommandResult:
     """`idf.py --version` 실행을 subprocess seam으로 감싼다."""
     execute = runner or default_runner
-    return execute([idf_py, "--version"])
+    resolved = resolve_idf_py(idf_py, which=which)
+    return execute([resolved, "--version"])
 
 
 def _compiler_on_path(which: WhichFn, compiler_name: str) -> bool:
@@ -135,7 +165,7 @@ def diagnose_idf_environment(
     xtensa_found = _compiler_on_path(lookup, XTENSA_GCC)
     riscv_found = _compiler_on_path(lookup, RISCV_GCC)
 
-    cmd_result = run_idf_version(runner=runner)
+    cmd_result = run_idf_version(runner=runner, which=lookup)
 
     if cmd_result.error:
         return DiagnosisResult(
