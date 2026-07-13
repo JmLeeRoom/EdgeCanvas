@@ -176,6 +176,18 @@ def test_graph_terminates_without_infinite_loop(tmp_path):
     assert final["verdict"] in ("PASS", "FAIL")
 
 
+def test_sim_mode_widget_tolerance_failure_triggers_self_correct(tmp_path):
+    """위젯 오차 >5%이면 verify FAIL로 self_correct 경로에 진입한다."""
+    scenario = MockScenario(sim_verdicts=[True, True], sim_widget_errors=[8.0, 2.0])
+    mocks = _make_mocks(scenario, tmp_path)
+    final = _run_graph(mocks, run_mode="sim")
+
+    assert final["verdict"] == "PASS"
+    verify_entries = [h for h in final["history"] if h.get("node") == "verify_simulation"]
+    assert any(e.get("widget_error_pct", 0) > 5 for e in verify_entries)
+    assert any(h.get("node") == "self_correct" for h in final["history"])
+
+
 def test_write_report_markdown_serializes_state(tmp_path):
     state: HMIAgentState = {
         "run_mode": "sim",
