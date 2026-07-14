@@ -13,3 +13,4 @@ tiktoken
 fastapi
 httpx
 uvicorn
+streamlit
