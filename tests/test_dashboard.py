@@ -10,13 +10,14 @@ from __future__ import annotations
 
 from pathlib import Path
 from typing import Any
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
-import httpx
 import pytest
 
 from src.dashboard.app import (
     CAPTURE_FILENAME,
+    DEFAULT_MAX_POLLS,
+    DEFAULT_WASM_HTTP_URL,
     MAX_UPLOAD_BYTES,
     WASM_INDEX_REL,
     build_run_payload,
@@ -24,9 +25,12 @@ from src.dashboard.app import (
     compute_dashboard_view,
     find_capture_image,
     format_log_lines,
+    is_file_uri,
+    poll_run_until_terminal,
     post_run_request,
     resolve_wasm_iframe_path,
     validate_pdf_upload,
+    wasm_iframe_src,
 )
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -111,7 +115,30 @@ def test_healthy_backend_and_wasm_ready_state() -> None:
     )
     assert view.state == "ready"
     assert view.iframe_src is not None
-    assert "index.html" in view.iframe_src
+    assert view.iframe_src.startswith("http")
+    assert "file://" not in view.iframe_src
+
+
+def test_wasm_iframe_src_defaults_to_http_not_file() -> None:
+    src = wasm_iframe_src(WASM_INDEX)
+    assert src == DEFAULT_WASM_HTTP_URL
+    assert src.startswith("http")
+    assert not is_file_uri(src)
+
+
+def test_wasm_iframe_src_respects_p10_wasm_url(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("P10_WASM_URL", "http://localhost:9090/sim/")
+    assert wasm_iframe_src(WASM_INDEX) == "http://localhost:9090/sim/"
+
+
+def test_wasm_iframe_src_explicit_override_beats_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("P10_WASM_URL", "http://env-only/")
+    assert wasm_iframe_src(WASM_INDEX, wasm_url="http://sidebar/") == "http://sidebar/"
+
+
+def test_is_file_uri_detects_file_scheme() -> None:
+    assert is_file_uri("file:///C:/web/index.html") is True
+    assert is_file_uri("http://127.0.0.1:8080/") is False
 
 
 # ---------------------------------------------------------------------------
@@ -176,6 +203,23 @@ def test_poll_status_formats_log_redirect_lines() -> None:
     )
     assert any("parse_datasheet" in line for line in lines)
     assert any("PASS" in line for line in lines)
+
+
+def test_poll_run_until_terminal_defaults_to_sixty_polls() -> None:
+    """DoD realtime viewer — Start path must not hardcode max_polls=3."""
+    assert DEFAULT_MAX_POLLS == 60
+    api_base = "http://127.0.0.1:8000"
+    run_id = "run-poll"
+    status_url = f"{api_base}/api/status/{run_id}"
+    client = MockHttpClient(
+        {status_url: (200, {"status": "running", "current_node": "parse_datasheet"})}
+    )
+    with patch("src.dashboard.app.time.sleep", return_value=None):
+        history, terminal = poll_run_until_terminal(
+            api_base, client, run_id, interval_sec=0.0
+        )
+    assert terminal == "running"
+    assert len(history) == DEFAULT_MAX_POLLS
 
 
 def test_find_capture_image_polls_output_dir(tmp_path: Path) -> None:

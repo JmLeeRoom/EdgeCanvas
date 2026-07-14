@@ -1,21 +1,35 @@
-﻿============================= test session starts =============================
+============================= test session starts =============================
 platform win32 -- Python 3.13.14, pytest-9.1.1, pluggy-1.6.0 -- D:\EdgeCanvas\.venv\Scripts\python.exe
 cachedir: .pytest_cache
 rootdir: D:\EdgeCanvas
 plugins: anyio-4.14.1, langsmith-0.9.8
-collecting ... collected 12 items
+collecting ... collected 17 items
 
-tests/test_dashboard.py::test_backend_503_shows_backend_error_state PASSED [  8%]
-tests/test_dashboard.py::test_missing_wasm_iframe_shows_wasm_error_state PASSED [ 16%]
-tests/test_dashboard.py::test_wasm_iframe_path_resolves_when_index_exists PASSED [ 25%]
-tests/test_dashboard.py::test_healthy_backend_and_wasm_ready_state PASSED [ 33%]
-tests/test_dashboard.py::test_build_run_payload_matches_api_contract PASSED [ 41%]
-tests/test_dashboard.py::test_post_run_request_sends_payload_via_mock_client PASSED [ 50%]
-tests/test_dashboard.py::test_poll_status_formats_log_redirect_lines PASSED [ 58%]
-tests/test_dashboard.py::test_find_capture_image_polls_output_dir PASSED [ 66%]
-tests/test_dashboard.py::test_validate_pdf_upload_accepts_valid_pdf PASSED [ 75%]
-tests/test_dashboard.py::test_validate_pdf_upload_rejects_oversized_file PASSED [ 83%]
-tests/test_dashboard.py::test_validate_pdf_upload_rejects_non_pdf_extension PASSED [ 91%]
+tests/test_dashboard.py::test_backend_503_shows_backend_error_state PASSED [  5%]
+tests/test_dashboard.py::test_missing_wasm_iframe_shows_wasm_error_state PASSED [ 11%]
+tests/test_dashboard.py::test_wasm_iframe_path_resolves_when_index_exists PASSED [ 17%]
+tests/test_dashboard.py::test_healthy_backend_and_wasm_ready_state PASSED [ 23%]
+tests/test_dashboard.py::test_wasm_iframe_src_defaults_to_http_not_file PASSED [ 29%]
+tests/test_dashboard.py::test_wasm_iframe_src_respects_p10_wasm_url PASSED [ 35%]
+tests/test_dashboard.py::test_wasm_iframe_src_explicit_override_beats_env PASSED [ 41%]
+tests/test_dashboard.py::test_is_file_uri_detects_file_scheme PASSED     [ 47%]
+tests/test_dashboard.py::test_build_run_payload_matches_api_contract PASSED [ 52%]
+tests/test_dashboard.py::test_post_run_request_sends_payload_via_mock_client PASSED [ 58%]
+tests/test_dashboard.py::test_poll_status_formats_log_redirect_lines PASSED [ 64%]
+tests/test_dashboard.py::test_poll_run_until_terminal_defaults_to_sixty_polls PASSED [ 70%]
+tests/test_dashboard.py::test_find_capture_image_polls_output_dir PASSED [ 76%]
+tests/test_dashboard.py::test_validate_pdf_upload_accepts_valid_pdf PASSED [ 82%]
+tests/test_dashboard.py::test_validate_pdf_upload_rejects_oversized_file PASSED [ 88%]
+tests/test_dashboard.py::test_validate_pdf_upload_rejects_non_pdf_extension PASSED [ 94%]
 tests/test_dashboard.py::test_oversized_upload_sets_upload_rejected_view_state PASSED [100%]
 
-============================= 12 passed in 0.08s ==============================
+============================= 17 passed in 0.71s ==============================
+
+Pass 2 Critical fixes (2026-07-14):
+- Screenshot docs/verification/T-852_dashboard.png: Pillow layout mock of Streamlit
+  HMI (sidebar WASM HTTP URL, upload/spec panels, WASM Simulator / Camera capture /
+  Live logs tabs, Start pipeline). Agent browser Streamlit capture unavailable;
+  replaced prior text-placeholder PNG.
+- wasm_iframe_src defaults to http://127.0.0.1:8080/ (P10_WASM_URL / sidebar override);
+  file:// warned.
+- Start path: session + periodic poll/rerun up to DEFAULT_MAX_POLLS=60 (no max_polls=3).

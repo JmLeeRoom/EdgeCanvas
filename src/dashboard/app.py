@@ -17,9 +17,13 @@ MAX_UPLOAD_BYTES = 10 * 1024 * 1024
 
 DEFAULT_API_BASE = os.environ.get("P10_API_BASE", "http://127.0.0.1:8000")
 DEFAULT_OUTPUT_DIR = Path(os.environ.get("P10_OUTPUT_DIR", "output"))
+# Serve src/simulator/web/ over HTTP — browsers block file:// iframes from Streamlit.
+DEFAULT_WASM_HTTP_URL = "http://127.0.0.1:8080/"
+DEFAULT_WASM_URL = os.environ.get("P10_WASM_URL", DEFAULT_WASM_HTTP_URL)
 WASM_INDEX_REL = Path("src/simulator/web/index.html")
 CAPTURE_FILENAME = "captured_rectified.png"
 POLL_INTERVAL_SEC = float(os.environ.get("P10_DASHBOARD_POLL_SEC", "2.0"))
+DEFAULT_MAX_POLLS = 60
 
 DashboardState = Literal[
     "ready",
@@ -73,12 +77,32 @@ def resolve_wasm_iframe_path(
     return resolved if resolved.is_file() else None
 
 
-def wasm_iframe_src(index_path: Path) -> str:
-    """iframe src — 환경변수 P10_WASM_URL 우선, 없으면 file:// 절대 경로."""
+def is_file_uri(url: str) -> bool:
+    """True when iframe src uses file:// (blocked by browsers under http Streamlit)."""
+    return url.strip().lower().startswith("file:")
+
+
+def wasm_iframe_src(
+    index_path: Path | None = None,
+    *,
+    wasm_url: str | None = None,
+) -> str:
+    """iframe src for Streamlit embedding.
+
+    Prefer explicit ``wasm_url``, then ``P10_WASM_URL``, then HTTP default
+    ``http://127.0.0.1:8080/`` (serve ``src/simulator/web/`` with
+    ``python -m http.server 8080``). Never defaults to ``file://``.
+
+    ``index_path`` is accepted for call-site compatibility; existence is
+    checked via ``resolve_wasm_iframe_path`` before embedding.
+    """
+    _ = index_path
+    if wasm_url:
+        return wasm_url
     override = os.environ.get("P10_WASM_URL")
     if override:
         return override
-    return index_path.resolve().as_uri()
+    return DEFAULT_WASM_HTTP_URL
 
 
 def build_run_payload(
@@ -184,6 +208,7 @@ def compute_dashboard_view(
     run_status: str | None = None,
     status_history: list[dict[str, Any]] | None = None,
     capture_path: Path | None = None,
+    wasm_url: str | None = None,
 ) -> DashboardView:
     """백엔드·WASM·업로드·실행 상태를 단일 뷰 모델로 집계."""
     log_lines = tuple(format_log_lines(status_history or []))
@@ -207,11 +232,11 @@ def compute_dashboard_view(
         return DashboardView(
             state="upload_rejected",
             message=upload_error,
-            iframe_src=wasm_iframe_src(wasm_index_path),
+            iframe_src=wasm_iframe_src(wasm_index_path, wasm_url=wasm_url),
             log_lines=log_lines,
         )
 
-    iframe = wasm_iframe_src(wasm_index_path)
+    iframe = wasm_iframe_src(wasm_index_path, wasm_url=wasm_url)
     capture_str = str(capture_path) if capture_path else None
 
     if run_status == "running":
@@ -253,10 +278,10 @@ def poll_run_until_terminal(
     client: HttpClient,
     run_id: str,
     *,
-    max_polls: int = 60,
+    max_polls: int = DEFAULT_MAX_POLLS,
     interval_sec: float = POLL_INTERVAL_SEC,
 ) -> tuple[list[dict[str, Any]], str]:
-    """상태 폴링 — 터미널(completed/failed)까지 history 수집."""
+    """상태 폴링 — 터미널(completed/failed)까지 history 수집 (기본 60회)."""
     history: list[dict[str, Any]] = []
     terminal = "running"
     for _ in range(max_polls):
@@ -268,6 +293,15 @@ def poll_run_until_terminal(
                 break
         time.sleep(interval_sec)
     return history, terminal
+
+
+def poll_run_once(
+    api_base: str,
+    client: HttpClient,
+    run_id: str,
+) -> dict[str, Any] | None:
+    """단일 상태 스냅샷 — Streamlit 세션 폴링/rerun 경로용."""
+    return fetch_run_status(api_base, client, run_id)
 
 
 def _write_uploaded_pdf(uploaded: Any, dest_dir: Path) -> Path:
@@ -288,6 +322,7 @@ def render_dashboard() -> None:
     """Streamlit UI — 테스트는 순수 함수 경로로 커버."""
     import httpx
     import streamlit as st
+    import streamlit.components.v1 as components
 
     st.set_page_config(page_title="P10 Manufacturing Dashboard", layout="wide")
     st.title("P10 Manufacturing — Web HMI Dashboard (T-852)")
@@ -295,6 +330,22 @@ def render_dashboard() -> None:
     root = repo_root()
     api_base = st.sidebar.text_input("API base URL", value=DEFAULT_API_BASE)
     output_dir = Path(st.sidebar.text_input("Output directory", value=str(DEFAULT_OUTPUT_DIR)))
+    wasm_url = st.sidebar.text_input(
+        "WASM URL",
+        value=DEFAULT_WASM_URL,
+        help=(
+            "HTTP URL serving src/simulator/web/ (default http://127.0.0.1:8080/). "
+            "Override with env P10_WASM_URL. From web/: python -m http.server 8080"
+        ),
+    )
+    st.sidebar.caption(
+        "Serve WASM statically: `cd src/simulator/web && python -m http.server 8080` "
+        "(or set P10_WASM_URL). file:// iframes are blocked by the browser."
+    )
+    if is_file_uri(wasm_url):
+        st.sidebar.warning(
+            "file:// WASM URL will not load inside Streamlit — use an HTTP URL instead."
+        )
 
     try:
         with httpx.Client() as http:
@@ -310,6 +361,31 @@ def render_dashboard() -> None:
         st.session_state.run_id = None
     if "run_status" not in st.session_state:
         st.session_state.run_status = None
+    if "poll_count" not in st.session_state:
+        st.session_state.poll_count = 0
+
+    # Realtime log redirect: session poll + periodic rerun (DoD E2E viewer)
+    if (
+        st.session_state.run_status == "running"
+        and st.session_state.run_id
+        and st.session_state.poll_count < DEFAULT_MAX_POLLS
+    ):
+        with httpx.Client() as http:
+            snap = poll_run_once(api_base, http, st.session_state.run_id)
+        if snap:
+            st.session_state.status_history.append(snap)
+            terminal = str(snap.get("status", "running"))
+            st.session_state.run_status = terminal
+            if terminal in ("completed", "failed"):
+                st.session_state.poll_count = 0
+            else:
+                st.session_state.poll_count += 1
+                time.sleep(POLL_INTERVAL_SEC)
+                st.rerun()
+        else:
+            st.session_state.poll_count += 1
+            time.sleep(POLL_INTERVAL_SEC)
+            st.rerun()
 
     upload_error: str | None = None
 
@@ -345,6 +421,7 @@ def render_dashboard() -> None:
         run_status=st.session_state.run_status,
         status_history=st.session_state.status_history,
         capture_path=find_capture_image(output_dir, st.session_state.run_id),
+        wasm_url=wasm_url,
     )
 
     if view.state == "backend_error":
@@ -353,12 +430,16 @@ def render_dashboard() -> None:
         st.warning(view.message)
     elif view.state == "upload_rejected":
         st.error(view.message)
+    elif view.state == "running":
+        st.info(view.message)
 
     tab_sim, tab_capture, tab_logs = st.tabs(["WASM Simulator", "Camera capture", "Live logs"])
 
     with tab_sim:
         if view.iframe_src:
-            st.components.v1.iframe(view.iframe_src, height=640, scrolling=True)
+            if is_file_uri(view.iframe_src):
+                st.warning("WASM iframe uses file:// — browsers block this; switch to HTTP.")
+            components.iframe(view.iframe_src, height=640, scrolling=True)
         else:
             st.info("WASM simulator iframe unavailable.")
 
@@ -397,14 +478,16 @@ def render_dashboard() -> None:
                     {"status": "failed", "error": {"message": err or "start failed"}}
                 )
                 st.session_state.run_status = "failed"
+                st.session_state.poll_count = 0
             else:
                 run_id = body["run_id"]
                 st.session_state.run_id = run_id
                 st.session_state.run_status = body.get("status", "queued")
-                st.session_state.status_history.append(body)
-                history, terminal = poll_run_until_terminal(api_base, http, run_id, max_polls=3)
-                st.session_state.status_history.extend(history[1:] if len(history) > 1 else [])
-                st.session_state.run_status = terminal
+                st.session_state.status_history = [body]
+                st.session_state.poll_count = 0
+                # Kick realtime viewer: first snap then session + periodic rerun (default ≤60)
+                if st.session_state.run_status not in ("completed", "failed"):
+                    st.session_state.run_status = "running"
         st.rerun()
 
 
