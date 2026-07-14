@@ -75,9 +75,8 @@ def render_lvgl_c_source(
     """LVGL 9.x ``lv_image_dsc_t`` C 소스 문자열을 생성한다."""
     stride = width * BYTES_PER_PIXEL_RGB565
     data_size = len(pixel_data)
-    cf = "LV_COLOR_FORMAT_RGB565" if color_format.upper() in ("RGB565", "CF_TRUE_COLOR") else (
-        "LV_COLOR_FORMAT_RGB565"
-    )
+    # T-402 scope: RGB565 / CF_TRUE_COLOR only (LVGL 9.x 16-bit).
+    cf = "LV_COLOR_FORMAT_RGB565"
     map_name = f"{symbol_name}_map"
     hex_body = _format_hex_array(pixel_data)
 
@@ -130,9 +129,9 @@ def convert_with_pillow(
     out.mkdir(parents=True, exist_ok=True)
 
     name = _safe_c_ident(symbol_name or src.stem)
-    img = Image.open(src)
-    width, height = img.size
-    pixel_data = _pixels_to_rgb565_bytes(img)
+    with Image.open(src) as img:
+        width, height = img.size
+        pixel_data = _pixels_to_rgb565_bytes(img)
     c_text = render_lvgl_c_source(
         symbol_name=name,
         width=width,

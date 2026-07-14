@@ -159,6 +159,24 @@ def test_cli_nonzero_exit_falls_back_to_pillow(
     _assert_lvgl_c_structure(c_path.read_text(encoding="utf-8"))
 
 
+def test_cli_unavailable_falls_back_to_pillow(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """PATH에 npx/lv_img_conv가 없으면 CLI를 건너뛰고 Pillow로 변환한다."""
+    png = _make_fixture_png(tmp_path / "no_cli.png", width=4, height=2)
+    out_dir = tmp_path / "no_cli_out"
+
+    monkeypatch.setattr(
+        "src.asset.image_converter.lv_img_conv_available", lambda: False
+    )
+
+    c_path = convert_png_to_c(png, out_dir, prefer_cli=True)
+    assert c_path.exists()
+    text = c_path.read_text(encoding="utf-8")
+    _assert_lvgl_c_structure(text)
+    assert "Pillow" in text
+
+
 def test_force_pillow_rgb565_produces_valid_c(tmp_path: Path) -> None:
     """명시적 Pillow 경로도 RGB565 C를 생성한다."""
     png = _make_fixture_png(tmp_path / "direct.png", width=2, height=2, color=(255, 128, 0))
