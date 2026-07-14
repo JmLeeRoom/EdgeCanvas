@@ -1,0 +1,83 @@
+T-904 검증 기록 — README·설치 스크립트 및 비원 개발자 검증
+Task: T-904 (Task29)
+Issue: #69
+Branch: feature/T-904-readme-install
+Pass: 1 (automated substitute)
+
+================================================================================
+1. 자동화 검증 (Pass 1 대체 evidence)
+================================================================================
+제3자 동료의 60분 수동 설치 시험은 아직 수행하지 않았다.
+Pass 1 DoD(스크립트·README)는 아래 자동 점검으로 우선 충족하고,
+실제 비원 개발자 60분 시험은 아래 섹션 3 템플릿에 수동 evidence 로 채운다.
+
+명령:
+  python -m pytest tests/test_install_scripts.py -v
+
+확인 항목(자동):
+  - Git 미설치 fixture → abort + https://git-scm.com/downloads
+  - Python 미설치 / 최소 버전 미달 fixture → abort + https://www.python.org/downloads/
+  - mock runner 로 Git/Python/API key 가드 통과
+  - install.bat / install.sh 에 Card 12 링크·install_bootstrap 연동 존재
+  - README 에 하드웨어 결선, API 키, ESP-IDF 5.3+, Python 가이드 및 명령 블록 순서
+
+결과: (pytest 실행 후 이 아래에 붙여넣기)
+
+```
+============================= test session starts =============================
+platform win32 -- Python 3.13.14, pytest-9.1.1, pluggy-1.6.0 -- D:\EdgeCanvas\.venv\Scripts\python.exe
+rootdir: D:\EdgeCanvas
+plugins: anyio-4.14.1, langsmith-0.9.8
+collected 8 items
+
+tests/test_install_scripts.py::test_missing_git_aborts_with_download_link PASSED
+tests/test_install_scripts.py::test_missing_python_aborts_with_download_link PASSED
+tests/test_install_scripts.py::test_python_below_minimum_aborts_with_download_link PASSED
+tests/test_install_scripts.py::test_guards_pass_with_mock_runner_and_api_keys PASSED
+tests/test_install_scripts.py::test_api_key_check_reports_missing_keys PASSED
+tests/test_install_scripts.py::test_install_scripts_exist_and_contain_card12_guards PASSED
+tests/test_install_scripts.py::test_readme_exists_with_required_sections_and_command_order PASSED
+tests/test_install_scripts.py::test_verification_slot_documents_manual_third_party_trial PASSED
+
+============================== 8 passed in 6.62s ==============================
+```
+
+Pass 1 시각: 2026-07-14 (로컬)
+
+
+================================================================================
+2. 개선 피드백 (자동 점검에서 반영한 항목)
+================================================================================
+- install.bat/sh: Git·Python 부재 시 다운로드 URL 출력 후 exit 1
+- src.common.install_bootstrap: 동일 가드를 mockable 로 분리 (TDD)
+- README: Quick start 순서를 clone → install.* → venv → .env → CLI 로 고정
+- Python 3.14+ 경고(Issue #71) 명시
+
+
+================================================================================
+3. 제3자 60분 수동 검증 템플릿 (인간 시험용 — 미기입 = 대기)
+================================================================================
+수행일(YYYY-MM-DD): _______________
+시험자(프로젝트 비원): _______________
+OS / 환경: _______________
+시작 시각: _____  종료 시각: _____  소요(분): _____
+
+체크리스트 (구두 조언 없이 README + install.* 만으로):
+  [ ] git clone
+  [ ] install.bat 또는 install.sh 성공
+  [ ] .venv 활성화 + import cv2
+  [ ] .env API 키 인식(또는 시연용 fake/sim 경로 안내 이해)
+  [ ] python -m src.cli.main --help 또는 run --mode sim 시작 단계 도달
+
+판정: PASS / FAIL / PARTIAL
+소요 ≤ 60분: YES / NO
+
+막힌 지점 / 개선 피드백:
+  -
+
+
+================================================================================
+4. Pass 1 메모
+================================================================================
+수동 60분 슬롯은 섹션 3에 비워 두었으며, 자동화 테스트가 설치 분기·README
+명령 순서를 대리 검증한다. Pass 2 이후 동료 섭외 시 섹션 3을 채울 것.
