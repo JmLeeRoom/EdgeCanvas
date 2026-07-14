@@ -1,0 +1,10 @@
+# Mock GCC log: missing semicolon (Phase A fixture — not real idf.py)
+main/ui_screens.c: In function 'create_home_screen':
+main/ui_screens.c:42:5: error: expected ';' before 'lv_obj_set_size'
+   42 |     lv_obj_set_size(btn, 100, 40)
+      |     ^~~~~~~~~~~~~~~
+      |                     ;
+main/ui_screens.c:45:10: warning: unused variable 'tmp' [-Wunused-variable]
+   45 |     int tmp = 0;
+      |         ^~~
+collect2.exe: error: ld returned 1 exit status
