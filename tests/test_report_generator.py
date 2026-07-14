@@ -81,6 +81,8 @@ def test_report_written_with_header_and_metrics_table(tmp_path: Path):
 
     content = report_path.read_text(encoding="utf-8")
     assert content.startswith("# HMI Verification Report")
+    assert "## Evaluation Metrics" in content
+    assert "| Metric | Value |" in content
     assert "|" in content  # markdown table
     assert "parse_datasheet" in content
     assert "generate_code" in content
@@ -97,8 +99,10 @@ def test_generate_verification_report_markdown_structure():
     state = _completed_mock_state()
     md = generate_verification_report(state, vision_image_path=None)
     assert "# HMI Verification Report" in md
-    assert "| Node |" in md or "| node |" in md.lower() or "Node" in md
-    assert "Credits" in md or "credits" in md.lower() or "크레딧" in md
+    assert "| Node |" in md
+    assert "Credits" in md
+    assert "## Evaluation Metrics" in md
+    assert "| Metric | Value |" in md
 
 
 def test_missing_vision_image_uses_placeholder(tmp_path: Path):
