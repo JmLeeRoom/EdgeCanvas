@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>EdgeCanvas LVGL WASM Sim (T-850)</title>
+  <style>
+    html, body {
+      margin: 0;
+      height: 100%;
+      background: #111;
+      color: #ddd;
+      font-family: system-ui, sans-serif;
+    }
+    #wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100%;
+      gap: 0.75rem;
+    }
+    #canvas {
+      display: block;
+      background: #000;
+      outline: none;
+      /* Target panel: 1024×600 (T-801/802 convention) */
+      width: 1024px;
+      max-width: 100%;
+      height: auto;
+      aspect-ratio: 1024 / 600;
+    }
+    .hint { font-size: 0.85rem; opacity: 0.7; }
+  </style>
+</head>
+<body>
+  <div id="wrap">
+    <canvas
+      id="canvas"
+      width="1024"
+      height="600"
+      oncontextmenu="event.preventDefault()"
+      tabindex="-1"
+    ></canvas>
+    <p class="hint">LVGL WASM simulator — loads <code>lvgl_sim.js</code> / <code>lvgl_sim.wasm</code></p>
+  </div>
+  <script>
+    // Emscripten Module config: bind SDL/canvas surface before glue runs.
+    var Module = {
+      canvas: (function () {
+        return document.getElementById("canvas");
+      })(),
+      locateFile: function (path) {
+        // Resolve .wasm next to this HTML (same directory as lvgl_sim.js).
+        return path;
+      },
+      onRuntimeInitialized: function () {
+        console.log("[T-850] lvgl_sim wasm runtime ready");
+      },
+    };
+  </script>
+  <!-- Built by: make -C src/simulator/web  →  build_web/lvgl_sim.js
+       Copy or symlink lvgl_sim.js + lvgl_sim.wasm next to this file to serve.
+       MIME: application/javascript (.js), application/wasm (.wasm) -->
+  <script async type="text/javascript" src="lvgl_sim.js"></script>
+</body>
+</html>

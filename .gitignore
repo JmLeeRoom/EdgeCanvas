@@ -20,6 +20,9 @@ credentials.json
 runs/
 output/
 build_sim/
+# T-850 Emscripten WASM 산출물 (거대 .wasm 커밋 방지)
+build_web/
+src/simulator/web/build_web/
 
 # ESP-IDF
 sdkconfig
