@@ -1,0 +1,38 @@
+﻿T-850 WASM browser pipeline — verification log
+==============================================
+Date: 2026-07-14
+Branch: feature/T-850-wasm-web
+Issue: #63
+
+Summary:
+- TDD Green: mock emcc produces lvgl_sim.js / lvgl_sim.wasm fixtures.
+- SKIPPED vs FAILED distinguished (emcc missing → SKIPPED + sdl2_desktop fallback).
+- Real emcc not on PATH in this environment → optional live build skipped
+  (Phase B optional; SDL2 desktop remains the default fallback per card 12).
+- Artifacts: src/simulator/web/Makefile, index.html, README.md (emsdk notes);
+  src/simulator/wasm_build.py (Python exception guard).
+
+Command: python -m pytest tests/test_wasm_build.py -v --tb=short
+
+============================= test session starts =============================
+platform win32 -- Python 3.13.14, pytest-9.1.1, pluggy-1.6.0 -- D:\EdgeCanvas\.venv\Scripts\python.exe
+cachedir: .pytest_cache
+rootdir: D:\EdgeCanvas
+plugins: anyio-4.14.1, langsmith-0.9.8
+collecting ... collected 11 items
+
+tests/test_wasm_build.py::test_web_pipeline_artifacts_exist PASSED       [  9%]
+tests/test_wasm_build.py::test_index_html_references_canvas_and_lvgl_sim_js PASSED [ 18%]
+tests/test_wasm_build.py::test_makefile_targets_lvgl_sim_via_emcc PASSED [ 27%]
+tests/test_wasm_build.py::test_mime_types_for_wasm_web_assets PASSED     [ 36%]
+tests/test_wasm_build.py::test_emcc_missing_is_skipped_not_failed PASSED [ 45%]
+tests/test_wasm_build.py::test_compile_error_fixture_is_failed_not_skipped PASSED [ 54%]
+tests/test_wasm_build.py::test_compile_error_can_raise_wasm_compile_error PASSED [ 63%]
+tests/test_wasm_build.py::test_mock_emcc_produces_js_and_wasm_paths PASSED [ 72%]
+tests/test_wasm_build.py::test_card12_no_emsdk_auto_skip_documents_sdl2_fallback PASSED [ 81%]
+tests/test_wasm_build.py::test_resolve_emcc_none_when_missing PASSED     [ 90%]
+tests/test_wasm_build.py::test_optional_real_emcc_build_when_installed SKIPPED [100%]
+
+======================== 10 passed, 1 skipped in 0.08s ========================
+
+RESULT: PASS (deterministic without emsdk; real WASM compile deferred to emsdk-enabled host)
