@@ -10,3 +10,6 @@ flake8
 python-dotenv
 langgraph
 tiktoken
+fastapi
+httpx
+uvicorn
