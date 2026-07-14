@@ -1,0 +1,9 @@
+{
+  "run_id": "run_05",
+  "mode": "sim",
+  "status": "FAIL",
+  "compile_success": true,
+  "device_boot_success": true,
+  "vision_match": false,
+  "self_heal_rounds": 4
+}

@@ -1,0 +1,150 @@
+﻿# T-902 Benchmark Scores
+
+====================================================
+ P10 EdgeCanvas Benchmark Scoreboard (T-902)
+====================================================
+ Runs                 : 10  (PASS=6 FAIL=3 TIMEOUT=1)
+----------------------------------------------------
+ 1. Compile Success Rate   : 80.0%
+ 2. Device/Boot Success    : 70.0%
+ 3. Vision Match Rate      : 60.0%
+ 4. Self-heal Avg Rounds   : 2.3
+----------------------------------------------------
+ (ko) 컴파일 성공률 / 실기 기동률 / Vision 일치율 / 수렴 라운드 평균
+====================================================
+
+## JSON
+{
+  "task": "T-902",
+  "generated_at": "2026-07-14T05:07:07.008507+00:00",
+  "n_runs": 10,
+  "compile_success_rate": 80.0,
+  "device_boot_success_rate": 70.0,
+  "vision_match_rate": 60.0,
+  "self_heal_avg_rounds": 2.3,
+  "n_pass": 6,
+  "n_fail": 3,
+  "n_timeout": 1,
+  "run_timeout_sec": 180.0,
+  "results": [
+    {
+      "run_id": "run_01",
+      "status": "PASS",
+      "compile_success": true,
+      "device_boot_success": true,
+      "vision_match": true,
+      "self_heal_rounds": 1,
+      "mode": "sim"
+    },
+    {
+      "run_id": "run_02",
+      "status": "PASS",
+      "compile_success": true,
+      "device_boot_success": true,
+      "vision_match": true,
+      "self_heal_rounds": 2,
+      "mode": "sim"
+    },
+    {
+      "run_id": "run_03",
+      "status": "PASS",
+      "compile_success": true,
+      "device_boot_success": true,
+      "vision_match": true,
+      "self_heal_rounds": 1,
+      "mode": "sim"
+    },
+    {
+      "run_id": "run_04",
+      "status": "PASS",
+      "compile_success": true,
+      "device_boot_success": true,
+      "vision_match": true,
+      "self_heal_rounds": 3,
+      "mode": "sim"
+    },
+    {
+      "run_id": "run_05",
+      "status": "FAIL",
+      "compile_success": true,
+      "device_boot_success": true,
+      "vision_match": false,
+      "self_heal_rounds": 4,
+      "mode": "sim"
+    },
+    {
+      "run_id": "run_06",
+      "status": "FAIL",
+      "compile_success": true,
+      "device_boot_success": false,
+      "vision_match": false,
+      "self_heal_rounds": 5,
+      "mode": "sim"
+    },
+    {
+      "run_id": "run_07",
+      "status": "FAIL",
+      "compile_success": false,
+      "device_boot_success": false,
+      "vision_match": false,
+      "self_heal_rounds": 5,
+      "mode": "sim"
+    },
+    {
+      "run_id": "run_08",
+      "status": "PASS",
+      "compile_success": true,
+      "device_boot_success": true,
+      "vision_match": true,
+      "self_heal_rounds": 0,
+      "mode": "sim"
+    },
+    {
+      "run_id": "run_09",
+      "status": "TIMEOUT",
+      "compile_success": false,
+      "device_boot_success": false,
+      "vision_match": false,
+      "self_heal_rounds": 0,
+      "mode": "sim"
+    },
+    {
+      "run_id": "run_10",
+      "status": "PASS",
+      "compile_success": true,
+      "device_boot_success": true,
+      "vision_match": true,
+      "self_heal_rounds": 2,
+      "mode": "sim"
+    }
+  ]
+}
+
+## pytest
+Command: .venv\Scripts\python.exe -m pytest tests/test_benchmark.py -v
+Result: 7 passed
+
+============================= test session starts =============================
+platform win32 -- Python 3.13.14, pytest-9.1.1, pluggy-1.6.0 -- D:\EdgeCanvas\.venv\Scripts\python.exe
+cachedir: .pytest_cache
+rootdir: D:\EdgeCanvas
+plugins: anyio-4.14.1, langsmith-0.9.8
+collecting ... collected 7 items
+
+tests/test_benchmark.py::test_run_timeout_constant_is_3_minutes PASSED   [ 14%]
+tests/test_benchmark.py::test_fixed_manifests_reproduce_scoreboard PASSED [ 28%]
+tests/test_benchmark.py::test_mixed_fail_timeout_fail_rates_and_avg_rounds PASSED [ 42%]
+tests/test_benchmark.py::test_per_run_timeout_marks_fail_and_continues PASSED [ 57%]
+tests/test_benchmark.py::test_benchmark_runner_ten_runs_from_manifests PASSED [ 71%]
+tests/test_benchmark.py::test_scoreboard_pretty_format_and_verification_write PASSED [ 85%]
+tests/test_benchmark.py::test_device_boot_placeholder_none_when_unmeasured PASSED [100%]
+
+============================== 7 passed in 0.29s ==============================
+
+
+## Formula validity (architect)
+- compile_success_rate = (# compile_success) / N * 100 = 8/10 * 100 = 80.0%
+- device_boot_success_rate = (# device_boot_success) / N * 100 = 7/10 * 100 = 70.0% (fixture; Phase A may use None=N/A)
+- vision_match_rate = (# vision_match) / N * 100 = 6/10 * 100 = 60.0%
+- self_heal_avg_rounds = sum(rounds) / N = 23/10 = 2.3
+- RUN_TIMEOUT_SEC = 180 (card 12); hang → status=TIMEOUT FAIL, continue next run
