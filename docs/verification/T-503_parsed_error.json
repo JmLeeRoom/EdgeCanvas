@@ -1,0 +1,26 @@
+{
+  "diagnostics": [
+    {
+      "file": "main/ui_screens.c",
+      "line": 42,
+      "column": 5,
+      "severity": "error",
+      "message": "expected ';' before 'lv_obj_set_size'",
+      "symbol": "lv_obj_set_size",
+      "function": "create_home_screen"
+    },
+    {
+      "file": "main/ui_screens.c",
+      "line": 45,
+      "column": 10,
+      "severity": "warning",
+      "message": "unused variable 'tmp' [-Wunused-variable]",
+      "symbol": "tmp",
+      "function": "create_home_screen"
+    }
+  ],
+  "error_count": 1,
+  "warning_count": 1,
+  "source": "tests/data/gcc_missing_semicolon.log",
+  "task": "T-503"
+}
