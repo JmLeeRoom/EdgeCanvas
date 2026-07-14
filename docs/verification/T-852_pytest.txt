@@ -1,0 +1,21 @@
+﻿============================= test session starts =============================
+platform win32 -- Python 3.13.14, pytest-9.1.1, pluggy-1.6.0 -- D:\EdgeCanvas\.venv\Scripts\python.exe
+cachedir: .pytest_cache
+rootdir: D:\EdgeCanvas
+plugins: anyio-4.14.1, langsmith-0.9.8
+collecting ... collected 12 items
+
+tests/test_dashboard.py::test_backend_503_shows_backend_error_state PASSED [  8%]
+tests/test_dashboard.py::test_missing_wasm_iframe_shows_wasm_error_state PASSED [ 16%]
+tests/test_dashboard.py::test_wasm_iframe_path_resolves_when_index_exists PASSED [ 25%]
+tests/test_dashboard.py::test_healthy_backend_and_wasm_ready_state PASSED [ 33%]
+tests/test_dashboard.py::test_build_run_payload_matches_api_contract PASSED [ 41%]
+tests/test_dashboard.py::test_post_run_request_sends_payload_via_mock_client PASSED [ 50%]
+tests/test_dashboard.py::test_poll_status_formats_log_redirect_lines PASSED [ 58%]
+tests/test_dashboard.py::test_find_capture_image_polls_output_dir PASSED [ 66%]
+tests/test_dashboard.py::test_validate_pdf_upload_accepts_valid_pdf PASSED [ 75%]
+tests/test_dashboard.py::test_validate_pdf_upload_rejects_oversized_file PASSED [ 83%]
+tests/test_dashboard.py::test_validate_pdf_upload_rejects_non_pdf_extension PASSED [ 91%]
+tests/test_dashboard.py::test_oversized_upload_sets_upload_rejected_view_state PASSED [100%]
+
+============================= 12 passed in 0.08s ==============================
