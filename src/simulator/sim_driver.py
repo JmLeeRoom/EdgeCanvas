@@ -17,6 +17,10 @@ from pathlib import Path
 DEFAULT_SIM_HOR_RES = 1024
 DEFAULT_SIM_VER_RES = 600
 
+# T-901 카드 12: SDL 창 렌더 완료 전 조기 캡처(빈 화면 Vision FAIL) 방지.
+# 기존 개념적 2초 대기에서 5초 안전 마진으로 상향.
+CAPTURE_RENDER_WAIT_SEC = 5.0
+
 # T-801 관례: build_sim/bin/lvgl_simulator(.exe)
 _EXECUTABLE_NAME = "lvgl_simulator.exe" if sys.platform == "win32" else "lvgl_simulator"
 
@@ -148,6 +152,7 @@ class SimDriver:
         )
         # SDL 창이 실제로 뜰 시간을 잠깐 준다(즉시 크래시하는 경우를 조기 감지).
         time.sleep(0.5)
+        self._started_at = time.monotonic()
         return self.process
 
     def is_running(self) -> bool:
@@ -206,19 +211,51 @@ class SimDriver:
         except Exception:
             return self.make_placeholder_frame()
 
-    def capture_screenshot(self, path: Path) -> Path:
+    def capture_screenshot(
+        self,
+        path: Path,
+        *,
+        render_wait_sec: float | None = None,
+    ) -> Path:
         """시뮬레이터 창 화면을 1024x600 PNG로 저장한다.
 
         상위 디렉토리(output/<run_id>/assets/)가 없으면 생성한다.
+        창 기동 시각(`start`) 기준 ``CAPTURE_RENDER_WAIT_SEC``(기본 5초)가
+        지날 때까지 대기해 조기 빈 화면 캡처를 피한다(T-901 카드 12).
         """
         path = Path(path)
         path.parent.mkdir(parents=True, exist_ok=True)
 
-        from PIL import Image
+        wait_budget = (
+            CAPTURE_RENDER_WAIT_SEC if render_wait_sec is None else float(render_wait_sec)
+        )
+        started = getattr(self, "_started_at", None)
+        if started is not None:
+            elapsed = time.monotonic() - float(started)
+            remaining = wait_budget - elapsed
+            if remaining > 0:
+                time.sleep(remaining)
+        elif render_wait_sec is not None:
+            # 명시적으로 wait를 요청한 경우(테스트 seam)에만 start 없이 대기한다.
+            time.sleep(wait_budget)
 
         frame = self._grab_frame()
-        image = frame if isinstance(frame, Image.Image) else Image.fromarray(frame)
-        if image.size != (DEFAULT_SIM_HOR_RES, DEFAULT_SIM_VER_RES):
-            image = image.resize((DEFAULT_SIM_HOR_RES, DEFAULT_SIM_VER_RES))
-        image.save(path, format="PNG")
+        try:
+            from PIL import Image
+
+            image = frame if isinstance(frame, Image.Image) else Image.fromarray(frame)
+            if image.size != (DEFAULT_SIM_HOR_RES, DEFAULT_SIM_VER_RES):
+                image = image.resize((DEFAULT_SIM_HOR_RES, DEFAULT_SIM_VER_RES))
+            image.save(path, format="PNG")
+        except ImportError:
+            import cv2
+            import numpy as np
+
+            arr = np.asarray(frame)
+            if arr.ndim == 3 and arr.shape[2] == 3:
+                arr = arr[:, :, ::-1]  # RGB → BGR
+            if arr.shape[0] != DEFAULT_SIM_VER_RES or arr.shape[1] != DEFAULT_SIM_HOR_RES:
+                arr = cv2.resize(arr, (DEFAULT_SIM_HOR_RES, DEFAULT_SIM_VER_RES))
+            if not cv2.imwrite(str(path), arr):
+                raise RuntimeError(f"PNG 저장 실패: {path}") from None
         return path

@@ -96,8 +96,18 @@ def _assets_dir(mocks: OrchestratorMocks, state: HMIAgentState) -> Path:
 
 
 def _finalize_report(state: HMIAgentState, mocks: OrchestratorMocks) -> dict[str, Any]:
-    run_id = state.get("run_id", "run_orchestrator")
-    report_path = write_report_markdown(state, mocks.output_dir / run_id)
+    """T-703 `write_report`로 `output/<run_id>/report.md`를 기록한다.
+
+    레거시 `write_report_markdown`는 하위 호환용으로 유지한다.
+    """
+    from src.agent.report_generator import write_report
+
+    report_path = write_report(
+        state,
+        output_dir=mocks.output_dir,
+        vision_image_path=state.get("screenshot_path") or None,
+        also_checkpoint=True,
+    )
     return {"report_path": str(report_path)}
 
 
@@ -149,8 +159,23 @@ def build_orchestrator_graph(mocks: OrchestratorMocks):
     def verify_simulation(state: HMIAgentState) -> dict[str, Any]:
         assets = _assets_dir(mocks, state)
         screenshot_path = assets / "captured_sim.png"
-        mocks.capture_screenshot(screenshot_path)
-        judge = mocks.vision_judge(screenshot_path)
+        try:
+            mocks.capture_screenshot(screenshot_path)
+            judge = mocks.vision_judge(screenshot_path)
+        except Exception as exc:  # noqa: BLE001 — E2E에서 캡처/판정 실패를 FAIL로 정규화
+            return {
+                "screenshot_path": str(screenshot_path),
+                "last_verification_passed": False,
+                "consecutive_pass_count": 0,
+                "history": _append_history(
+                    state,
+                    "verify_simulation",
+                    message=f"capture/vision error: {exc}",
+                    verification_passed=False,
+                    widget_error_pct=100.0,
+                    error=str(exc),
+                ),
+            }
 
         passed = bool(judge.get("passed", False))
         widget_error = float(judge.get("widget_error_pct", 100.0))
