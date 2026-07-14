@@ -1,0 +1,29 @@
+{
+  "var": "scr",
+  "type": "screen",
+  "bbox": [0, 0, 1024, 600],
+  "children": [
+    {
+      "var": "header",
+      "type": "obj",
+      "bbox": [0, 0, 1024, 71],
+      "children": [],
+      "event_handlers": []
+    },
+    {
+      "var": "ok_btn",
+      "type": "button",
+      "bbox": [620, 470, 171, 81],
+      "children": [],
+      "event_handlers": []
+    },
+    {
+      "var": "cancel_btn",
+      "type": "button",
+      "bbox": [810, 470, 171, 81],
+      "children": [],
+      "event_handlers": []
+    }
+  ],
+  "event_handlers": []
+}
