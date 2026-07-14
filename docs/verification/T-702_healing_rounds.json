@@ -1,0 +1,105 @@
+{
+  "task": "T-702",
+  "description": "Self-healing round transitions: sim max 5, 3-fail restore backup",
+  "sim_round_max": 5,
+  "rounds": [
+    {
+      "round": 1,
+      "verdict": null,
+      "exit_loop": false,
+      "restored_from_backup": false,
+      "previous_error": "main/ui_screens.c:42: expected ';' before 'lv_obj_set_size'",
+      "code_snapshot": "/* m1 broken */\n",
+      "llm_context_preview": "# Self-healing Feedback for Solar Pro 3\n\n이전 빌드/검증이 실패했습니다. 아래 피드백을 참고하여 UI 코드를 수정하세요.\n\n## 직전(previous) 발생 에러\nmain/ui_screens.c:42: expected ';' before 'lv_obj_set_size'\n\n## 컴파일 에러\n- [error] main/ui_screens.c:42:5: expected ';' before 'lv_ob"
+    },
+    {
+      "round": 2,
+      "verdict": null,
+      "exit_loop": false,
+      "restored_from_backup": false,
+      "previous_error": "main/ui_screens.c:10: unknown type name 'lv_boj_t'",
+      "code_snapshot": "/* m2 worse */\n",
+      "llm_context_preview": "# Self-healing Feedback for Solar Pro 3\n\n이전 빌드/검증이 실패했습니다. 아래 피드백을 참고하여 UI 코드를 수정하세요.\n\n## 직전(previous) 발생 에러\nmain/ui_screens.c:10: unknown type name 'lv_boj_t'\n\n## 컴파일 에러\n- [error] main/ui_screens.c:10:1: unknown type name 'lv_boj_t' → fix "
+    },
+    {
+      "round": 3,
+      "verdict": null,
+      "exit_loop": false,
+      "restored_from_backup": true,
+      "previous_error": "main/ui_screens.c:15: expected declaration or statement",
+      "code_snapshot": "/* INITIAL TEMPLATE */\nvoid ui_create(void) { lv_obj_t *scr = lv_scr_act(); }\n",
+      "llm_context_preview": "# Self-healing Feedback for Solar Pro 3\n\n이전 빌드/검증이 실패했습니다. 아래 피드백을 참고하여 UI 코드를 수정하세요.\n\n## 직전(previous) 발생 에러\nmain/ui_screens.c:15: expected declaration or statement\n\n## 컴파일 에러\n- [error] main/ui_screens.c:15:3: expected declaration or statem"
+    },
+    {
+      "round": 4,
+      "verdict": null,
+      "exit_loop": false,
+      "restored_from_backup": false,
+      "previous_error": "main/ui_screens.c:20: conflicting types",
+      "code_snapshot": "/* m4 after restore */\n",
+      "llm_context_preview": "# Self-healing Feedback for Solar Pro 3\n\n이전 빌드/검증이 실패했습니다. 아래 피드백을 참고하여 UI 코드를 수정하세요.\n\n## 직전(previous) 발생 에러\nmain/ui_screens.c:20: conflicting types\n\n## 컴파일 에러\n- [error] main/ui_screens.c:20:1: conflicting types → fix line 20 / 20번째 라인을 수정하"
+    },
+    {
+      "round": 5,
+      "verdict": "FAIL",
+      "exit_loop": true,
+      "restored_from_backup": false,
+      "previous_error": "main/ui_screens.c:25: undeclared identifier",
+      "code_snapshot": "/* m5 final */\n",
+      "llm_context_preview": "# Self-healing Feedback for Solar Pro 3\n\n이전 빌드/검증이 실패했습니다. 아래 피드백을 참고하여 UI 코드를 수정하세요.\n\n## 직전(previous) 발생 에러\nmain/ui_screens.c:25: undeclared identifier\n\n## 컴파일 에러\n- [error] main/ui_screens.c:25:1: undeclared identifier → fix line 25 / 25번째"
+    }
+  ],
+  "full_round_log": [
+    {
+      "round": 1,
+      "mode": "sim",
+      "previous_error": "main/ui_screens.c:42: expected ';' before 'lv_obj_set_size'",
+      "llm_context": "# Self-healing Feedback for Solar Pro 3\n\n이전 빌드/검증이 실패했습니다. 아래 피드백을 참고하여 UI 코드를 수정하세요.\n\n## 직전(previous) 발생 에러\nmain/ui_screens.c:42: expected ';' before 'lv_obj_set_size'\n\n## 컴파일 에러\n- [error] main/ui_screens.c:42:5: expected ';' before 'lv_obj_set_size' → fix line 42 / 42번째 라인을 수정하라\n\n### 원문 로그\nmain/ui_screens.c:42:5: error: expected ';' before 'lv_obj_set_size'\n\n## 비전 판정 어노테이션\n위젯 누락: btn_start\n\n다음 컴파일 에러를 참고해 코드의 42번째 라인을 수정하라.",
+      "code_snapshot": "/* m1 broken */\n",
+      "restored_from_backup": false,
+      "exit_loop": false,
+      "verdict": null
+    },
+    {
+      "round": 2,
+      "mode": "sim",
+      "previous_error": "main/ui_screens.c:10: unknown type name 'lv_boj_t'",
+      "llm_context": "# Self-healing Feedback for Solar Pro 3\n\n이전 빌드/검증이 실패했습니다. 아래 피드백을 참고하여 UI 코드를 수정하세요.\n\n## 직전(previous) 발생 에러\nmain/ui_screens.c:10: unknown type name 'lv_boj_t'\n\n## 컴파일 에러\n- [error] main/ui_screens.c:10:1: unknown type name 'lv_boj_t' → fix line 10 / 10번째 라인을 수정하라\n\n### 원문 로그\nmain/ui_screens.c:10:1: error: unknown type name 'lv_boj_t'\n\n## 비전 판정 어노테이션\nOCR mismatch: Start\n\n다음 컴파일 에러를 참고해 코드의 10번째 라인을 수정하라.",
+      "code_snapshot": "/* m2 worse */\n",
+      "restored_from_backup": false,
+      "exit_loop": false,
+      "verdict": null
+    },
+    {
+      "round": 3,
+      "mode": "sim",
+      "previous_error": "main/ui_screens.c:15: expected declaration or statement",
+      "llm_context": "# Self-healing Feedback for Solar Pro 3\n\n이전 빌드/검증이 실패했습니다. 아래 피드백을 참고하여 UI 코드를 수정하세요.\n\n## 직전(previous) 발생 에러\nmain/ui_screens.c:15: expected declaration or statement\n\n## 컴파일 에러\n- [error] main/ui_screens.c:15:3: expected declaration or statement → fix line 15 / 15번째 라인을 수정하라\n\n### 원문 로그\nmain/ui_screens.c:15:3: error: expected declaration or statement\n\n## 비전 판정 어노테이션\nmissing label\n\n다음 컴파일 에러를 참고해 코드의 15번째 라인을 수정하라.\n\n## 정책: 템플릿 백업 복원\n3라운드 연속 실패로 초기 템플릿 백업 코드원본을 강제 복원했다. 이 백업을 기준으로 다시 수정을 시도하라.\n",
+      "code_snapshot": "/* INITIAL TEMPLATE */\nvoid ui_create(void) { lv_obj_t *scr = lv_scr_act(); }\n",
+      "restored_from_backup": true,
+      "exit_loop": false,
+      "verdict": null
+    },
+    {
+      "round": 4,
+      "mode": "sim",
+      "previous_error": "main/ui_screens.c:20: conflicting types",
+      "llm_context": "# Self-healing Feedback for Solar Pro 3\n\n이전 빌드/검증이 실패했습니다. 아래 피드백을 참고하여 UI 코드를 수정하세요.\n\n## 직전(previous) 발생 에러\nmain/ui_screens.c:20: conflicting types\n\n## 컴파일 에러\n- [error] main/ui_screens.c:20:1: conflicting types → fix line 20 / 20번째 라인을 수정하라\n\n### 원문 로그\nmain/ui_screens.c:20:1: error: conflicting types\n\n## 비전 판정 어노테이션\nwidget size +/-10%\n\n다음 컴파일 에러를 참고해 코드의 20번째 라인을 수정하라.",
+      "code_snapshot": "/* m4 after restore */\n",
+      "restored_from_backup": false,
+      "exit_loop": false,
+      "verdict": null
+    },
+    {
+      "round": 5,
+      "mode": "sim",
+      "previous_error": "main/ui_screens.c:25: undeclared identifier",
+      "llm_context": "# Self-healing Feedback for Solar Pro 3\n\n이전 빌드/검증이 실패했습니다. 아래 피드백을 참고하여 UI 코드를 수정하세요.\n\n## 직전(previous) 발생 에러\nmain/ui_screens.c:25: undeclared identifier\n\n## 컴파일 에러\n- [error] main/ui_screens.c:25:1: undeclared identifier → fix line 25 / 25번째 라인을 수정하라\n\n### 원문 로그\nmain/ui_screens.c:25:1: error: undeclared identifier\n\n## 비전 판정 어노테이션\ntext FAIL\n\n다음 컴파일 에러를 참고해 코드의 25번째 라인을 수정하라.",
+      "code_snapshot": "/* m5 final */\n",
+      "restored_from_backup": false,
+      "exit_loop": true,
+      "verdict": "FAIL"
+    }
+  ],
+  "pytest": "8 passed (tests/test_healing_controller.py)"
+}
