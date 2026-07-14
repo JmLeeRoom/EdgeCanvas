@@ -1,0 +1,29 @@
+{
+  "task": "T-901",
+  "mode": "sim",
+  "verdict": "PASS",
+  "exit_code": 0,
+  "pytest": "python -m pytest tests/e2e/test_cli_pipeline_sim.py -v",
+  "result": "6 passed, 1 skipped (live API marker)",
+  "sim_round_max": 5,
+  "board_required": false,
+  "webcam_required": false,
+  "adapters": {
+    "api": "fake (local datasheet chunks)",
+    "llm": "fake (fixture ui_screens.c)",
+    "hw": "fake (unused in sim mode)",
+    "vision": "T-603 WidgetLocationEvaluator + T-604 TextMatchEvaluator",
+    "screenshot": "T-802 fixture tests/data/ui_normal.png"
+  },
+  "manifest_fields": [
+    "output/<run_id>/report.md",
+    "output/<run_id>/assets/captured_sim.png",
+    "output/<run_id>/generated_ui_screens.c",
+    "output/<run_id>/checkpoint.json"
+  ],
+  "card_12": {
+    "CAPTURE_RENDER_WAIT_SEC": 5.0,
+    "tested_by": "test_capture_render_wait_margin_is_5_seconds"
+  },
+  "hw_suite": "tests/e2e/test_cli_pipeline_hw.py (Phase HW skip placeholder)"
+}

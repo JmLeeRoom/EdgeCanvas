@@ -161,10 +161,17 @@ def test_capture_screenshot_writes_valid_png_to_run_assets_path(tmp_path, driver
         magic = fh.read(8)
     assert magic == b"\x89PNG\r\n\x1a\n", "유효한 PNG 매직 넘버가 아닙니다."
 
-    from PIL import Image
+    try:
+        from PIL import Image
 
-    with Image.open(target_path) as img:
-        assert img.size == (1024, 600)
+        with Image.open(target_path) as img:
+            assert img.size == (1024, 600)
+    except ImportError:
+        import cv2
+
+        loaded = cv2.imread(str(target_path))
+        assert loaded is not None
+        assert loaded.shape[1] == 1024 and loaded.shape[0] == 600
 
 
 def test_capture_screenshot_creates_missing_parent_directories(tmp_path, driver: SimDriver):
