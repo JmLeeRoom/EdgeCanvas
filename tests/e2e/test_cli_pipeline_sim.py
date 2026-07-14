@@ -21,12 +21,12 @@ from src.simulator.sim_driver import SimDriver
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 DATA_DIR = REPO_ROOT / "tests" / "data"
-UI_NORMAL = DATA_DIR / "ui_normal.png"
 UI_MISPLACED = DATA_DIR / "ui_misplaced.png"
 LAYOUT_JSON = DATA_DIR / "ui_layout_expected.json"
 SAMPLE_PDF = DATA_DIR / "p4_datasheet_sample.pdf"
 UI_SCREENS_C = DATA_DIR / "ui_screens.c"
 VERIFY_JSON = REPO_ROOT / "docs" / "verification" / "T-901_e2e_pass_report.json"
+SIM_ROUND_MAX = 5
 
 REQUIRES_LIVE_API = pytest.mark.skipif(
     True,
@@ -81,7 +81,8 @@ def test_missing_pdf_writes_fail_report(e2e_env: Path, tmp_path: Path):
     reports = list(e2e_env.glob("*/report.md"))
     assert reports, "누락 입력 시 output/<run_id>/report.md 실패 리포트가 있어야 한다"
     content = reports[0].read_text(encoding="utf-8")
-    assert "FAIL" in content or "HMI Verification Report" in content
+    assert "# HMI Verification Report" in content
+    assert "FAIL" in content
 
 
 def test_missing_spec_writes_fail_report(e2e_env: Path, tmp_path: Path):
@@ -223,8 +224,10 @@ def test_vision_fail_fixture_writes_fail_report(
     assert reports
     content = reports[0].read_text(encoding="utf-8")
     assert "FAIL" in content
-    # sim_round 상한 내에서 종료됐는지 매니페스트/리포트에 반영
-    assert "sim_round" in content.lower() or "FAIL" in content
+    assert "**sim_round**" in content or "sim_round" in content.lower()
+    checkpoint = json.loads((reports[0].parent / "checkpoint.json").read_text(encoding="utf-8"))
+    assert checkpoint.get("verdict") == "FAIL"
+    assert int(checkpoint.get("sim_round", 99)) <= SIM_ROUND_MAX
 
 
 def test_sim_e2e_pass_within_5_rounds(e2e_env: Path, tmp_path: Path):
@@ -254,24 +257,32 @@ def test_sim_e2e_pass_within_5_rounds(e2e_env: Path, tmp_path: Path):
     assert "# HMI Verification Report" in content
     assert "PASS" in content
     assert (run_dir / "assets" / "captured_sim.png").is_file()
-    # 생성 코드 산출물
-    code_candidates = list(run_dir.glob("**/*.c")) + [run_dir / "generated_ui_screens.c"]
-    assert any(p.is_file() for p in code_candidates) or "generated" in content.lower() or "```c" in content
-    assert (run_dir / "checkpoint.json").is_file()
+    assert (run_dir / "generated_ui_screens.c").is_file()
+    checkpoint_path = run_dir / "checkpoint.json"
+    assert checkpoint_path.is_file()
+    checkpoint = json.loads(checkpoint_path.read_text(encoding="utf-8"))
+    assert checkpoint.get("verdict") == "PASS"
+    assert int(checkpoint.get("sim_round", 99)) <= SIM_ROUND_MAX
     assert VERIFY_JSON.is_file(), "docs/verification/T-901_e2e_pass_report.json 이 커밋되어 있어야 한다"
     saved = json.loads(VERIFY_JSON.read_text(encoding="utf-8"))
     assert saved.get("task") == "T-901"
     assert saved.get("verdict") == "PASS"
+    assert saved.get("card_12", {}).get("CAPTURE_RENDER_WAIT_SEC") == 5.0
 
 
 def test_capture_render_wait_margin_is_5_seconds(monkeypatch: pytest.MonkeyPatch, tmp_path: Path):
-    """카드 12: SDL 렌더 완료 안전을 위해 캡처 전 대기 마진이 5초다."""
+    """카드 12: SDL 렌더 완료 안전을 위해 캡처 전 대기 마진이 5초다.
+
+    빈 화면 Vision 오탐 FAIL을 막기 위해 CAPTURE_RENDER_WAIT_SEC=5.0 이며,
+    캡처 실패는 orchestrator에서 FAIL 리포트로 정규화된다
+    (test_sim_driver_failure_writes_fail_report).
+    """
     import src.simulator.sim_driver as sim_driver_mod
 
     assert getattr(sim_driver_mod, "CAPTURE_RENDER_WAIT_SEC", None) == 5.0
 
     sleeps: list[float] = []
-    monkeypatch.setattr(time, "sleep", lambda s: sleeps.append(float(s)))
+    monkeypatch.setattr(sim_driver_mod.time, "sleep", lambda s: sleeps.append(float(s)))
 
     driver = SimDriver(build_dir=tmp_path / "build_sim")
     driver._started_at = time.monotonic() - 0.1  # type: ignore[attr-defined]
