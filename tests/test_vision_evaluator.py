@@ -85,23 +85,28 @@ def test_detect_widgets_via_canny_contours(evaluator: WidgetLocationEvaluator):
 
 
 def test_adaptive_threshold_fallback_on_glare(tmp_path: Path, expected_layout: dict):
-    """카드 12: 고정 threshold/Canny가 깨지는 난반사 유사 이미지에서 adaptiveThreshold 폴백.
+    """카드 12: 조도 불균일/난반사에서 Canny가 깨지고 adaptiveThreshold가 위젯을 잡는다.
 
-    그라데이션 배경 + 약한 대비 위젯을 합성해 Canny 단독 검출이 실패하고,
-    adaptive 경로로는 기대 bbox가 나오는지 검증한다.
+    가로 사인파 + 세로 그라데이션 배경에 약한 대비 위젯을 올려 Canny 단독은 실패하고,
+    adaptive 경로는 버튼급 bbox를 확보하는지 검증한다.
     """
     img = np.zeros((600, 1024, 3), dtype=np.uint8)
-    for y in range(600):
-        level = int(140 + 60 * (y / 599.0))
-        img[y, :, :] = (level, level, level)
+    ys = np.arange(600, dtype=np.float64)[:, None]
+    xs = np.arange(1024, dtype=np.float64)[None, :]
+    levels = np.clip(120 + 50 * np.sin(xs / 40.0) + 40 * (ys / 599.0), 0, 255).astype(
+        np.uint8
+    )
+    img[:, :, 0] = levels
+    img[:, :, 1] = levels
+    img[:, :, 2] = levels
 
-    widgets = [
-        ("header", (0, 0, 1024, 71), 95),
-        ("ok_btn", (620, 470, 171, 81), 110),
-        ("cancel_btn", (810, 470, 171, 81), 110),
-    ]
-    for _name, (x, y, w, h), val in widgets:
-        img[y : y + h, x : x + w] = (val, val, val)
+    for (x, y, w, h), delta in [
+        ((0, 0, 1024, 71), 25),
+        ((620, 470, 171, 81), 30),
+        ((810, 470, 171, 81), 30),
+    ]:
+        patch = img[y : y + h, x : x + w].astype(np.int16) - delta
+        img[y : y + h, x : x + w] = np.clip(patch, 0, 255).astype(np.uint8)
 
     glare_path = tmp_path / "ui_glare.png"
     cv2.imwrite(str(glare_path), img)
@@ -112,18 +117,18 @@ def test_adaptive_threshold_fallback_on_glare(tmp_path: Path, expected_layout: d
     )
     adaptive_boxes = evaluator.detect_widget_bboxes(img, method="adaptive")
 
-    # Canny 단독으로는 헤더/버튼 3개를 안정적으로 못 잡는 환경을 전제(또는 매우 적음).
-    # adaptive는 기대 수에 가깝게 잡아야 한다.
+    assert len(canny_boxes) == 0, f"Canny가 깨져야 함: {canny_boxes}"
     assert len(adaptive_boxes) >= 2, adaptive_boxes
-    assert len(adaptive_boxes) >= len(canny_boxes)
+    lower_right = [b for b in adaptive_boxes if b[0] >= 500 and b[1] >= 400]
+    assert len(lower_right) >= 2, lower_right
 
     result = evaluator.evaluate(SimCaptureProvider(glare_path))
     # 폴백을 포함한 기본 evaluate 경로로 판정이 완료되어야 한다(예외 없이).
     assert result["verdict"] in ("PASS", "FAIL")
-    assert "detected_count" in result
+    assert result["detected_count"] >= 2
 
 
-def test_image_source_sim_and_camera_smoke(tmp_path: Path):
+def test_image_source_sim_and_camera_smoke():
     """ImageSource 추상화: SimCaptureProvider / CameraCaptureProvider 스모크."""
     sim = SimCaptureProvider(UI_NORMAL)
     frame = sim.load()

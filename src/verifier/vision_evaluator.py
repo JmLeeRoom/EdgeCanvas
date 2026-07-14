@@ -27,10 +27,6 @@ import numpy as np
 # coding-standards: 위젯 좌표 허용 오차 ±5%
 DEFAULT_TOLERANCE = 0.05
 
-# 시뮬 해상도(T-801/802): 1024×600
-SIM_WIDTH = 1024
-SIM_HEIGHT = 600
-
 # 텍스트/노이즈 제외 — T-009 fallback과 동일한 버튼급 면적 하한
 _MIN_WIDGET_AREA = 4000
 
@@ -129,22 +125,16 @@ class WidgetLocationEvaluator:
     ) -> list[tuple[int, int, int, int]]:
         """사각형 위젯 바운딩 박스 목록 ``[(x, y, w, h), ...]`` 을 반환한다."""
         if method == "canny":
-            # 에지 + 솔리드(Otsu)를 병합해 프레임 경계에 붙은 헤더도 안정 검출
-            boxes = self._merge_boxes(
-                self._detect_canny(image, min_area=min_area),
-                self._detect_solid(image, min_area=min_area),
-            )
+            boxes = self._detect_canny(image, min_area=min_area)
+            # 카드 12항: Canny 윤곽이 깨지면 adaptiveThreshold 폴백
             if allow_adaptive_fallback and not boxes:
                 return self._detect_adaptive(image, min_area=min_area)
             return boxes
         if method == "adaptive":
             return self._detect_adaptive(image, min_area=min_area)
 
-        # auto: Canny+솔리드 병합 후, 기대 위젯 대비 부족하면 adaptiveThreshold 폴백
-        boxes = self._merge_boxes(
-            self._detect_canny(image, min_area=min_area),
-            self._detect_solid(image, min_area=min_area),
-        )
+        # auto: Canny+findContours 우선, 기대 위젯 대비 부족하면 adaptiveThreshold 폴백
+        boxes = self._detect_canny(image, min_area=min_area)
         if allow_adaptive_fallback and len(boxes) < max(1, len(self.expected)):
             adaptive = self._detect_adaptive(image, min_area=min_area)
             boxes = self._merge_boxes(boxes, adaptive)
@@ -177,15 +167,6 @@ class WidgetLocationEvaluator:
             boxes.append((int(x), int(y), int(cw), int(ch)))
         boxes.sort(key=lambda b: (b[1], b[0]))
         return boxes
-
-    def _detect_solid(
-        self, image: np.ndarray, *, min_area: int
-    ) -> list[tuple[int, int, int, int]]:
-        """채색된 사각형 위젯(헤더/버튼)을 Otsu 이진화로 추출한다."""
-        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-        _, mask = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
-        contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        return self._contours_to_boxes(contours, image.shape[:2], min_area=min_area)
 
     def _detect_adaptive(
         self, image: np.ndarray, *, min_area: int
