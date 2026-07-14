@@ -1,0 +1,25 @@
+{
+  "verdict": "PASS",
+  "match_threshold": 0.9,
+  "ocr_texts": [
+    "P10 System Status",
+    "Ready"
+  ],
+  "phrase_results": [
+    {
+      "expected": "P10 System Status",
+      "best_ocr": "P10 System Status",
+      "match_ratio": 1.0,
+      "passed": true
+    }
+  ],
+  "ocr_pass": true,
+  "vlm": {
+    "status": "skipped",
+    "semantic_match": null,
+    "detail": "use_vlm=False"
+  },
+  "decision_source": "ocr_only",
+  "vlm_timeout_sec": 15.0,
+  "notes": "T-009: Solar vision multimodal not supported; primary path is local OCR."
+}
